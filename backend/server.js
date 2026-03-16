@@ -21,16 +21,25 @@ app.use("/api/users", userRoutes);
 
 // Public register endpoint: /api/register
 app.post("/api/register", async (req, res) => {
-  const { mobile, name, address, city, state, pincode, promoCode } = req.body;
+  const { mobile, name, email, address, city, state, pincode, promoCode } =
+    req.body;
 
-  if (!mobile || !name || !address || !city || !state || !pincode || !promoCode) {
+  if (!mobile || !name || !email || !address || !city || !state || !pincode || !promoCode) {
     return res.status(400).json({ message: "All fields are required." });
   }
 
   try {
+    const existing = await User.findOne({ mobile });
+    if (existing) {
+      return res
+        .status(400)
+        .json({ message: "This mobile number is already registered." });
+    }
+
     const user = await User.create({
       mobile,
       name,
+      email,
       address,
       city,
       state,

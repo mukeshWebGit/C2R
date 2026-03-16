@@ -3,8 +3,9 @@ import dns from "dns";
 dns.setServers(["1.1.1.1", "8.8.8.8"]); // Use Cloudflare DNS
 
 const userSchema = new mongoose.Schema({
-  mobile: String,
+  mobile: { type: String, unique: true },
   name: String,
+  email: String,
   address: String,
   city: String,
   state: String,

@@ -12,6 +12,7 @@ const PersonalDetails = () => {
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
+  const [email, setEmail] = useState("");
   const [stateValue, setStateValue] = useState("");
   const [city, setCity] = useState("");
   const [pincode, setPincode] = useState("");
@@ -19,7 +20,6 @@ const PersonalDetails = () => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     if (!mobileFromState || !promoCodeFromState) {
@@ -30,6 +30,9 @@ const PersonalDetails = () => {
   const validate = () => {
     const newErrors = {};
     if (!name.trim()) newErrors.name = "Name is required.";
+    if (!email.trim()) newErrors.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+      newErrors.email = "Enter a valid email address.";
     if (!address.trim()) newErrors.address = "Address is required.";
     if (!stateValue.trim()) newErrors.state = "State/UT is required.";
     if (!city.trim()) newErrors.city = "City is required.";
@@ -47,7 +50,6 @@ const PersonalDetails = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setServerError("");
-    setSuccessMessage("");
 
     if (!validate()) return;
 
@@ -62,6 +64,7 @@ const PersonalDetails = () => {
         body: JSON.stringify({
           mobile: mobileFromState,
           name,
+          email,
           address,
           city,
           state: stateValue,
@@ -75,7 +78,18 @@ const PersonalDetails = () => {
       if (!res.ok) {
         setServerError(data.message || "Unable to save details. Try again.");
       } else {
-        setSuccessMessage("Details submitted successfully!");
+        navigate("/scratch", {
+          state: {
+            mobileNumber: mobileFromState,
+            promoCode: promoCodeFromState,
+            name,
+            email,
+            address,
+            city,
+            state: stateValue,
+            pincode,
+          },
+        });
       }
     } catch (err) {
       setServerError("Server error. Please try again.");
@@ -156,6 +170,27 @@ const PersonalDetails = () => {
                 }`}
               >
                 {errors.name || " "}
+              </span>
+            </div>
+
+            {/* Email */}
+            <div className="flex flex-col mb-[20px]">
+              <div className="flex items-center gap-3 pb-2 border-b border-gray-300 focus-within:border-blue-600 transition-colors">
+                <input
+                  type="email"
+                  className="flex-1 border-none outline-none text-[16px] text-gray-800 bg-transparent placeholder:text-gray-400 focus:text-gray-800"
+                  placeholder="Email Id"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onBlur={validate}
+                />
+              </div>
+              <span
+                className={`text-xs min-h-[18px] transition-opacity duration-300 ${
+                  errors.email ? "text-red-600 opacity-100" : "opacity-0"
+                }`}
+              >
+                {errors.email || " "}
               </span>
             </div>
 
@@ -253,12 +288,6 @@ const PersonalDetails = () => {
             {serverError && (
               <p className="text-xs text-red-600 mb-2">{serverError}</p>
             )}
-            {successMessage && (
-              <p className="text-xs text-green-600 mb-2 text-center">
-                {successMessage}
-              </p>
-            )}
-
             <button
               type="submit"
               disabled={isSubmitting}
