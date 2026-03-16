@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import bannerMobile from "../assets/images/banner-m.jpg";
 import heroDesktop from "../assets/images/hero.jpg";
 import logo from "../assets/images/logo.png";
+import { API_BASE } from "../config/api";
 
 const ValidateOtp = () => {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ const ValidateOtp = () => {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/users/check-mobile", {
+      const res = await fetch(`${API_BASE}/api/users/check-mobile`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

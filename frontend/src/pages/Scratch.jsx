@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import logo from "../assets/images/logo.png";
 import hero2Mobile from "../assets/images/hero2-m.jpg";
 import winIcon from "../assets/images/win.png";
+import { API_BASE } from "../config/api";
 
 const Scratch = () => {
   const { mobile } = useParams();
@@ -34,7 +35,7 @@ const Scratch = () => {
       setLoadError("");
       try {
         const res = await fetch(
-          `http://localhost:5000/api/users/details?mobile=${encodeURIComponent(
+          `${API_BASE}/api/users/details?mobile=${encodeURIComponent(
             mobileFromState
           )}`
         );
