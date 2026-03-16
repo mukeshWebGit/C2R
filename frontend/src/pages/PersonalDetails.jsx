@@ -78,18 +78,8 @@ const PersonalDetails = () => {
       if (!res.ok) {
         setServerError(data.message || "Unable to save details. Try again.");
       } else {
-        navigate("/scratch", {
-          state: {
-            mobileNumber: mobileFromState,
-            promoCode: promoCodeFromState,
-            name,
-            email,
-            address,
-            city,
-            state: stateValue,
-            pincode,
-          },
-        });
+        localStorage.setItem("c2r_session", "1");
+        navigate(`/scratch/${encodeURIComponent(mobileFromState)}`);
       }
     } catch (err) {
       setServerError("Server error. Please try again.");

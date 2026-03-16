@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import logo from "../assets/images/logo.png";
 import hero2Mobile from "../assets/images/hero2-m.jpg";
 import winIcon from "../assets/images/win.png";
 
 const Scratch = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  const mobileFromState = location.state?.mobileNumber || "";
+  const { mobile } = useParams();
+  const mobileFromState = mobile || "";
   const [loading, setLoading] = useState(true);
   const [details, setDetails] = useState({
     promoCode: "",
@@ -23,10 +21,11 @@ const Scratch = () => {
   const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    if (!mobileFromState) {
-      navigate("/");
+    const token = localStorage.getItem("c2r_session");
+    if (!token) {
+      window.location.href = "/";
     }
-  }, [mobileFromState, navigate]);
+  }, []);
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -265,6 +264,18 @@ const Scratch = () => {
               </h2>
 
               <div className="flex flex-col gap-4">
+                <div className="flex justify-end mb-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.removeItem("c2r_session");
+                      window.location.href = "/";
+                    }}
+                    className="text-xs md:text-sm text-gray-500 hover:text-blue-600 underline"
+                  >
+                    Logout
+                  </button>
+                </div>
                 {loadError && (
                   <p className="text-xs text-red-600 mb-2">{loadError}</p>
                 )}

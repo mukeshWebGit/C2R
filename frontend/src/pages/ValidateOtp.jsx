@@ -56,9 +56,8 @@ const ValidateOtp = () => {
       if (!res.ok) {
         setOtpError(data.message || "Unable to verify mobile.");
       } else if (data.exists) {
-        navigate("/scratch", {
-          state: { mobileNumber: mobileFromState },
-        });
+        localStorage.setItem("c2r_session", "1");
+        navigate(`/scratch/${encodeURIComponent(mobileFromState)}`);
       } else {
         navigate("/promo-code", {
           state: { mobileNumber: mobileFromState },
