@@ -1,0 +1,423 @@
+import React, { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import logo from "../assets/images/logo.png";
+import hero2Mobile from "../assets/images/hero2-m.jpg";
+import winIcon from "../assets/images/win.png";
+
+const Scratch = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // In future you can fetch real data by mobile or promo code
+  const mobileFromState = location.state?.mobileNumber || "";
+  const promoCodeFromState = location.state?.promoCode || "ABCXYZ123456";
+  const nameFromState = location.state?.name || "Mukesh Kumar";
+  const emailFromState = location.state?.email || "example@email.com";
+  const addressFromState =
+    location.state?.address ||
+    "Dhawalgiri Apartment, Sector 11, Noida, Gautam Bhudh Nagar, UP, 201301.";
+
+  useEffect(() => {
+    if (!mobileFromState) {
+      navigate("/");
+    }
+  }, [mobileFromState, navigate]);
+
+  return (
+    <body className="font-lato min-h-screen flex items-center justify-end scratch-body">
+      {/* Main White Rounded Container */}
+      <div className="w-full max-w-[1100px] bg-white rounded-2xl scratch-main md:mr-[50px]">
+        {/* Header: Logo (Desktop) / Hero Image (Mobile) */}
+        <div
+          className="flex items-center justify-center py-[9px] px-4 relative z-10 logo-header"
+          style={{ boxShadow: "0 0px 10px 0px rgba(0, 0, 0, 0.15)" }}
+        >
+          <img
+            src={logo}
+            alt="Redeem Your Gift Logo"
+            className="max-w-[230px] h-auto hidden md:block"
+          />
+          <img
+            src={hero2Mobile}
+            alt="Hero Image"
+            className="w-full h-auto block md:hidden"
+          />
+        </div>
+
+        {/* Main Content Area with Pink Wavy Background */}
+        <div className="pink-wavy-bg px-6 py-8 md:px-14 md:py-12 overflow-hidden rounded-b-2xl">
+          {/* Two Column Layout: Scratch Card & Customer Details */}
+          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
+            {/* Left Column: Scratch Card */}
+            <div className="flex-1 flex items-center justify-center relative">
+              {/* Sparkle Icons Around Scratch Card (4 only) */}
+              {/* 1: Left & center to scratch card */}
+              <div className="sparkle sparkle-1 absolute top-1/2 -left-6 -translate-y-1/2">
+                <svg
+                  width="30"
+                  height="30"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"
+                    fill="#FF8C42"
+                    opacity="0.8"
+                  />
+                  <path
+                    d="M12 6L12.5 9L15.5 9.5L12.5 10L12 13L11.5 10L8.5 9.5L11.5 9L12 6Z"
+                    fill="#FFA366"
+                  />
+                </svg>
+              </div>
+              {/* 2: Bottom & 30px to right */}
+              <div
+                className="sparkle sparkle-2 absolute"
+                style={{ top: "35%", right: "10px" }}
+              >
+                <svg
+                  width="30"
+                  height="30"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"
+                    fill="#FF8C42"
+                    opacity="0.8"
+                  />
+                  <path
+                    d="M12 6L12.5 9L15.5 9.5L12.5 10L12 13L11.5 10L8.5 9.5L11.5 9L12 6Z"
+                    fill="#FFA366"
+                  />
+                </svg>
+              </div>
+              {/* 3: Right & 20px to bottom */}
+              <div
+                className="sparkle sparkle-3 absolute"
+                style={{ bottom: "15px", right: "25%" }}
+              >
+                <svg
+                  width="30"
+                  height="30"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"
+                    fill="#FF8C42"
+                    opacity="0.8"
+                  />
+                  <path
+                    d="M12 6L12.5 9L15.5 9.5L12.5 10L12 13L11.5 10L8.5 9.5L11.5 9L12 6Z"
+                    fill="#FFA366"
+                  />
+                </svg>
+              </div>
+              {/* 4: Right & top corner */}
+              <div
+                className="sparkle sparkle-4 absolute"
+                style={{ top: "16px", left: "25%" }}
+              >
+                <svg
+                  width="30"
+                  height="30"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"
+                    fill="#FF8C42"
+                    opacity="0.8"
+                  />
+                  <path
+                    d="M12 6L12.5 9L15.5 9.5L12.5 10L12 13L11.5 10L8.5 9.5L11.5 9L12 6Z"
+                    fill="#FFA366"
+                  />
+                </svg>
+              </div>
+
+              <div
+                className="w-[360px] h-[400px] relative rounded-[25px] overflow-hidden shadow-lg border border-gray-300"
+                id="scratchCard"
+              >
+                {/* Scratch Card Inner Design (Revealed after scratching) */}
+                <div className="absolute inset-0">
+                  {/* Teal Header Section (Top 40%) */}
+                  <div
+                    className="absolute top-0 left-0 right-0 h-[40%]"
+                    style={{ backgroundColor: "#19B8DA" }}
+                  />
+
+                  {/* "You Won!" Text (above win icon) */}
+                  <div className="absolute top-[13%] left-1/2 transform -translate-x-1/2 z-10 text-center">
+                    <h2 className="text-white font-bold" style={{ fontSize: 28 }}>
+                      You Won!
+                    </h2>
+                  </div>
+
+                  {/* White Circle with Win Icon (Overlapping boundary) */}
+                  <div
+                    className="absolute top-[26%] left-1/2 transform -translate-x-1/2 z-10"
+                    style={{
+                      padding: 15,
+                      border: "2px solid rgba(255, 255, 255, 0.5)",
+                      borderRadius: "50%",
+                    }}
+                  >
+                    <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center">
+                      <img
+                        src={winIcon}
+                        alt="Win"
+                        className="w-16 h-16 object-contain"
+                      />
+                    </div>
+                  </div>
+
+                  {/* White Bottom Section (Bottom 60%) */}
+                  <div className="absolute bottom-0 left-0 right-0 h-[60%] bg-white flex items-center justify-center">
+                    <h3 className="text-xl font-bold text-gray-800">
+                      UCB Wrist Watch
+                    </h3>
+                  </div>
+                </div>
+
+                {/* Scratchable cover image from public/images */}
+                <img
+                  src="/images/scratch-card.png"
+                  alt="Scratch Cover"
+                  className="absolute inset-0 w-full h-full object-cover z-20 pointer-events-none"
+                />
+                {/* Scratchable overlay canvas (for future scratch logic) */}
+                <canvas
+                  id="scratchCanvas"
+                  className="absolute inset-0 w-full h-full cursor-pointer touch-none z-30"
+                />
+                {/* Mouse icon on scratch card - animates left to right like scratch */}
+                <img
+                  id="scratchMouseIcon"
+                  src={hero2Mobile /* placeholder, replace with mouse.png */}
+                  alt="Scratch"
+                  className="scratch-icon-animate absolute left-1/2 object-contain pointer-events-none z-30 opacity-90"
+                  style={{
+                    top: 75,
+                    width: "auto",
+                    height: "auto",
+                    maxWidth: "none",
+                    maxHeight: "none",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Right Column: Customer Details */}
+            <div className="flex-1 customer-details-parent">
+              <h2
+                className="text-xl md:text-2xl font-bold mb-6"
+                style={{ color: "#168CA5" }}
+              >
+                Customer Details
+              </h2>
+
+              <div className="flex flex-col gap-4">
+                {/* Promotional Code Field */}
+                <div
+                  className="bg-white rounded-lg p-4 flex items-start gap-4 shadow-sm"
+                  style={{ border: "1px solid #E1D8D8" }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: "#DEF0F1" }}
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      style={{ color: "#1DA8C5" }}
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path d="M7.5 12c0 .83-.67 1.5-1.5 1.5S4.5 12.83 4.5 12s.67-1.5 1.5-1.5S7.5 11.17 7.5 12zm3-4.5C10.5 6.67 9.83 6 9 6S7.5 6.67 7.5 7.5 8.17 9 9 9s1.5-.67 1.5-1.5zm6 0C16.5 6.67 15.83 6 15 6s-1.5.67-1.5 1.5S14.17 9 15 9s1.5-.67 1.5-1.5zm3 4.5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5.67-1.5 1.5-1.5 1.5.67 1.5 1.5z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <label
+                      className="text-sm block"
+                      style={{ color: "#768599" }}
+                    >
+                      Promotional Code
+                    </label>
+                    <div
+                      className="text-base font-medium"
+                      style={{ color: "#2F3032" }}
+                    >
+                      {promoCodeFromState}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Name Field */}
+                <div
+                  className="bg-white rounded-lg p-4 flex items-start gap-4 shadow-sm"
+                  style={{ border: "1px solid #E1D8D8" }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: "#DEF0F1" }}
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      style={{ color: "#1DA8C5" }}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <label
+                      className="text-sm block"
+                      style={{ color: "#768599" }}
+                    >
+                      Name
+                    </label>
+                    <div
+                      className="text-base font-medium"
+                      style={{ color: "#2F3032" }}
+                    >
+                      {nameFromState}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile Number Field */}
+                <div
+                  className="bg-white rounded-lg p-4 flex items-start gap-4 shadow-sm"
+                  style={{ border: "1px solid #E1D8D8" }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: "#DEF0F1" }}
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      style={{ color: "#1DA8C5" }}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                      <line x1="12" y1="18" x2="12.01" y2="18" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <label
+                      className="text-sm block"
+                      style={{ color: "#768599" }}
+                    >
+                      Mobile Number
+                    </label>
+                    <div
+                      className="text-base font-medium"
+                      style={{ color: "#2F3032" }}
+                    >
+                      {mobileFromState}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Email Field */}
+                <div
+                  className="bg-white rounded-lg p-4 flex items-start gap-4 shadow-sm"
+                  style={{ border: "1px solid #E1D8D8" }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: "#DEF0F1" }}
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      style={{ color: "#1DA8C5" }}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                      <polyline points="22,6 12,13 2,6" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <label
+                      className="text-sm block"
+                      style={{ color: "#768599" }}
+                    >
+                      Email Id
+                    </label>
+                    <div
+                      className="text-base font-medium"
+                      style={{ color: "#2F3032" }}
+                    >
+                      {emailFromState}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Address Field */}
+                <div
+                  className="bg-white rounded-lg p-4 flex items-start gap-4 shadow-sm"
+                  style={{ border: "1px solid #E1D8D8" }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: "#DEF0F1" }}
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      style={{ color: "#1DA8C5" }}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <label
+                      className="text-sm block"
+                      style={{ color: "#768599" }}
+                    >
+                      Address
+                    </label>
+                    <div
+                      className="text-base font-medium"
+                      style={{ color: "#2F3032" }}
+                    >
+                      {addressFromState}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </body>
+  );
+};
+
+export default Scratch;
+
