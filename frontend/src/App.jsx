@@ -19,14 +19,8 @@ function App() {
         <Route path="/promo-code" element={<PromoCode />} />
 
         {/* Protected routes - require login flag in localStorage */}
-        <Route
-          path="/personal-details"
-          element={
-            <ProtectedRoute>
-              <PersonalDetails />
-            </ProtectedRoute>
-          }
-        />
+        {/* Personal details stays public within the flow so new users can reach it */}
+        <Route path="/personal-details" element={<PersonalDetails />} />
         <Route
           path="/scratch/:mobile"
           element={
