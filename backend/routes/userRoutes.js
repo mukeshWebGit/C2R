@@ -103,5 +103,46 @@ router.post("/check-mobile", async (req, res) => {
   }
 });
 
+// Get user details (and gift) by mobile
+router.get("/details", async (req, res) => {
+  const { mobile } = req.query;
+
+  if (!mobile) {
+    return res.status(400).json({ message: "Mobile number is required." });
+  }
+
+  try {
+    const user = await User.findOne({ mobile }).lean();
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    let giftName = user.giftName || null;
+    if (!giftName && user.promoCode) {
+      const promo = await PromoCode.findOne({
+        code: user.promoCode.toUpperCase(),
+      }).lean();
+      giftName = promo?.gift || null;
+    }
+
+    return res.json({
+      mobile: user.mobile,
+      name: user.name,
+      email: user.email || "",
+      address: user.address,
+      city: user.city,
+      state: user.state,
+      pincode: user.pincode,
+      promoCode: user.promoCode || "",
+      giftName,
+    });
+  } catch (err) {
+    console.error("Error fetching user details:", err.message);
+    return res
+      .status(500)
+      .json({ message: "Server error while fetching user details." });
+  }
+});
+
 export default router;
 

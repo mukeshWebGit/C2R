@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import logo from "../assets/images/logo.png";
 import hero2Mobile from "../assets/images/hero2-m.jpg";
@@ -8,20 +8,61 @@ const Scratch = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // In future you can fetch real data by mobile or promo code
   const mobileFromState = location.state?.mobileNumber || "";
-  const promoCodeFromState = location.state?.promoCode || "ABCXYZ123456";
-  const nameFromState = location.state?.name || "Mukesh Kumar";
-  const emailFromState = location.state?.email || "example@email.com";
-  const addressFromState =
-    location.state?.address ||
-    "Dhawalgiri Apartment, Sector 11, Noida, Gautam Bhudh Nagar, UP, 201301.";
+  const [loading, setLoading] = useState(true);
+  const [details, setDetails] = useState({
+    promoCode: "",
+    name: "",
+    email: "",
+    address: "",
+    city: "",
+    state: "",
+    pincode: "",
+    giftName: "",
+  });
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     if (!mobileFromState) {
       navigate("/");
     }
   }, [mobileFromState, navigate]);
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      if (!mobileFromState) return;
+      setLoading(true);
+      setLoadError("");
+      try {
+        const res = await fetch(
+          `http://localhost:5000/api/users/details?mobile=${encodeURIComponent(
+            mobileFromState
+          )}`
+        );
+        const data = await res.json();
+        if (!res.ok) {
+          setLoadError(data.message || "Unable to load customer details.");
+        } else {
+          setDetails({
+            promoCode: data.promoCode || "",
+            name: data.name || "",
+            email: data.email || "",
+            address: data.address || "",
+            city: data.city || "",
+            state: data.state || "",
+            pincode: data.pincode || "",
+            giftName: data.giftName || "",
+          });
+        }
+      } catch {
+        setLoadError("Unable to load customer details.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDetails();
+  }, [mobileFromState]);
 
   return (
     <body className="font-lato min-h-screen flex items-center justify-end scratch-body">
@@ -181,7 +222,7 @@ const Scratch = () => {
                   {/* White Bottom Section (Bottom 60%) */}
                   <div className="absolute bottom-0 left-0 right-0 h-[60%] bg-white flex items-center justify-center">
                     <h3 className="text-xl font-bold text-gray-800">
-                      UCB Wrist Watch
+                      {details.giftName || "Your Gift"}
                     </h3>
                   </div>
                 </div>
@@ -214,7 +255,7 @@ const Scratch = () => {
               </div>
             </div>
 
-            {/* Right Column: Customer Details */}
+                {/* Right Column: Customer Details */}
             <div className="flex-1 customer-details-parent">
               <h2
                 className="text-xl md:text-2xl font-bold mb-6"
@@ -224,6 +265,9 @@ const Scratch = () => {
               </h2>
 
               <div className="flex flex-col gap-4">
+                {loadError && (
+                  <p className="text-xs text-red-600 mb-2">{loadError}</p>
+                )}
                 {/* Promotional Code Field */}
                 <div
                   className="bg-white rounded-lg p-4 flex items-start gap-4 shadow-sm"
@@ -254,7 +298,7 @@ const Scratch = () => {
                       className="text-base font-medium"
                       style={{ color: "#2F3032" }}
                     >
-                      {promoCodeFromState}
+                      {details.promoCode}
                     </div>
                   </div>
                 </div>
@@ -292,7 +336,7 @@ const Scratch = () => {
                       className="text-base font-medium"
                       style={{ color: "#2F3032" }}
                     >
-                      {nameFromState}
+                      {details.name}
                     </div>
                   </div>
                 </div>
@@ -368,7 +412,7 @@ const Scratch = () => {
                       className="text-base font-medium"
                       style={{ color: "#2F3032" }}
                     >
-                      {emailFromState}
+                      {details.email}
                     </div>
                   </div>
                 </div>
@@ -406,7 +450,7 @@ const Scratch = () => {
                       className="text-base font-medium"
                       style={{ color: "#2F3032" }}
                     >
-                      {addressFromState}
+                      {details.address}
                     </div>
                   </div>
                 </div>
