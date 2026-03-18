@@ -73,6 +73,16 @@ const Scratch = () => {
           className="flex items-center justify-center py-[9px] px-4 relative z-10 logo-header"
           style={{ boxShadow: "0 0px 10px 0px rgba(0, 0, 0, 0.15)" }}
         >
+          <button
+            type="button"
+            onClick={() => {
+              localStorage.removeItem("c2r_session");
+              window.location.href = "/";
+            }}
+            className="hidden md:block absolute right-4 top-1/2 -translate-y-1/2 text-xs md:text-sm text-gray-500 hover:text-blue-600 underline"
+          >
+            Logout
+          </button>
           <img
             src={logo}
             alt="Redeem Your Gift Logo"
@@ -265,18 +275,6 @@ const Scratch = () => {
               </h2>
 
               <div className="flex flex-col gap-4">
-                <div className="flex justify-end mb-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      localStorage.removeItem("c2r_session");
-                      window.location.href = "/";
-                    }}
-                    className="text-xs md:text-sm text-gray-500 hover:text-blue-600 underline"
-                  >
-                    Logout
-                  </button>
-                </div>
                 {loadError && (
                   <p className="text-xs text-red-600 mb-2">{loadError}</p>
                 )}
