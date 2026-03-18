@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema({
   pincode: String,
   promoCode: String,
   giftName: String,
+  giftImage: String,
 });
 
 const User = mongoose.model("User", userSchema);

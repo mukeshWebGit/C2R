@@ -37,6 +37,7 @@ router.post("/verify-code", async (req, res) => {
     return res.json({
       message: "Code verified.",
       gift: promo.gift,
+      image: promo.image || "",
     });
   } catch (err) {
     console.error("Error verifying code:", err.message);
@@ -118,11 +119,13 @@ router.get("/details", async (req, res) => {
     }
 
     let giftName = user.giftName || null;
-    if (!giftName && user.promoCode) {
+    let giftImage = user.giftImage || null;
+    if (user.promoCode) {
       const promo = await PromoCode.findOne({
         code: user.promoCode.toUpperCase(),
       }).lean();
-      giftName = promo?.gift || null;
+      if (!giftName) giftName = promo?.gift || null;
+      if (!giftImage) giftImage = promo?.image || null;
     }
 
     return res.json({
@@ -135,6 +138,7 @@ router.get("/details", async (req, res) => {
       pincode: user.pincode,
       promoCode: user.promoCode || "",
       giftName,
+      giftImage,
     });
   } catch (err) {
     console.error("Error fetching user details:", err.message);
