@@ -1,13 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import logo from "../assets/images/logo.png";
 import hero2Mobile from "../assets/images/hero2-m.jpg";
+import mouseIcon from "../assets/images/mouse.png";
 import winIcon from "../assets/images/win.png";
 import { API_BASE } from "../config/api";
 
 const Scratch = () => {
+  const navigate = useNavigate();
   const { mobile } = useParams();
   const mobileFromState = mobile || "";
+  const canvasRef = useRef(null);
+  const cardRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [details, setDetails] = useState({
     promoCode: "",
@@ -20,6 +24,9 @@ const Scratch = () => {
     giftName: "",
   });
   const [loadError, setLoadError] = useState("");
+  const [isRevealed, setIsRevealed] = useState(false);
+  const [isFading, setIsFading] = useState(false);
+  const [shouldGoCongrats, setShouldGoCongrats] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("c2r_session");
@@ -27,6 +34,131 @@ const Scratch = () => {
       window.location.href = "/";
     }
   }, []);
+
+  useEffect(() => {
+    if (!shouldGoCongrats || !mobileFromState) return;
+    const t = window.setTimeout(() => {
+      navigate(`/congratulations/${encodeURIComponent(mobileFromState)}`);
+    }, 10000);
+    return () => window.clearTimeout(t);
+  }, [shouldGoCongrats, mobileFromState, navigate]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const card = cardRef.current;
+    if (!canvas || !card) return;
+
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return;
+
+    let isDrawing = false;
+    let lastCheckAt = 0;
+
+    const resizeAndPaint = () => {
+      if (isRevealed) return;
+      const rect = card.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(rect.width * dpr);
+      canvas.height = Math.floor(rect.height * dpr);
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `${rect.height}px`;
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.globalCompositeOperation = "source-over";
+
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        ctx.clearRect(0, 0, rect.width, rect.height);
+        ctx.drawImage(img, 0, 0, rect.width, rect.height);
+      };
+      img.src = "/images/scrach-card.png";
+    };
+
+    const getPos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    };
+
+    const scratchAt = (x, y) => {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.beginPath();
+      ctx.arc(x, y, 22, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    const checkReveal = () => {
+      if (isRevealed) return;
+      const now = Date.now();
+      if (now - lastCheckAt < 700) return;
+      lastCheckAt = now;
+
+      const w = canvas.width;
+      const h = canvas.height;
+      const step = 24;
+      const imgData = ctx.getImageData(0, 0, w, h).data;
+
+      let transparent = 0;
+      let total = 0;
+      for (let y = 0; y < h; y += step) {
+        for (let x = 0; x < w; x += step) {
+          const idx = (y * w + x) * 4 + 3;
+          total++;
+          if (imgData[idx] === 0) transparent++;
+        }
+      }
+
+      if (transparent / Math.max(1, total) >= 0.6) {
+        setIsRevealed(true);
+        setIsFading(true);
+        setShouldGoCongrats(true);
+        // keep the scratched pixels; just fade out the layer
+        window.setTimeout(() => {
+          const c = canvasRef.current;
+          const cctx = c?.getContext("2d");
+          if (c && cctx) cctx.clearRect(0, 0, c.width, c.height);
+          setIsFading(false);
+        }, 650);
+      }
+    };
+
+    const onDown = (e) => {
+      if (isRevealed) return;
+      isDrawing = true;
+      const { x, y } = getPos(e);
+      scratchAt(x, y);
+      checkReveal();
+    };
+
+    const onMove = (e) => {
+      if (!isDrawing || isRevealed) return;
+      e.preventDefault();
+      const { x, y } = getPos(e);
+      scratchAt(x, y);
+      checkReveal();
+    };
+
+    const onUp = () => {
+      isDrawing = false;
+    };
+
+    resizeAndPaint();
+    window.addEventListener("resize", resizeAndPaint);
+    canvas.addEventListener("pointerdown", onDown);
+    canvas.addEventListener("pointermove", onMove, { passive: false });
+    canvas.addEventListener("pointerup", onUp);
+    canvas.addEventListener("pointercancel", onUp);
+
+    return () => {
+      window.removeEventListener("resize", resizeAndPaint);
+      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointercancel", onUp);
+    };
+  }, [isRevealed]);
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -195,6 +327,7 @@ const Scratch = () => {
               <div
                 className="w-[360px] h-[400px] relative rounded-[25px] overflow-hidden shadow-lg border border-gray-300"
                 id="scratchCard"
+                ref={cardRef}
               >
                 {/* Scratch Card Inner Design (Revealed after scratching) */}
                 <div className="absolute inset-0">
@@ -237,23 +370,22 @@ const Scratch = () => {
                   </div>
                 </div>
 
-                {/* Scratchable cover image from public/images */}
-                <img
-                  src="/images/scratch-card.png"
-                  alt="Scratch Cover"
-                  className="absolute inset-0 w-full h-full object-cover z-20 pointer-events-none"
-                />
                 {/* Scratchable overlay canvas (for future scratch logic) */}
                 <canvas
                   id="scratchCanvas"
-                  className="absolute inset-0 w-full h-full cursor-pointer touch-none z-30"
+                  ref={canvasRef}
+                  className={`absolute inset-0 w-full h-full cursor-pointer touch-none z-30 transition-opacity duration-700 ${
+                    isRevealed ? "pointer-events-none" : ""
+                  } ${isFading ? "opacity-0" : "opacity-100"}`}
                 />
                 {/* Mouse icon on scratch card - animates left to right like scratch */}
                 <img
                   id="scratchMouseIcon"
-                  src={hero2Mobile /* placeholder, replace with mouse.png */}
+                  src={mouseIcon}
                   alt="Scratch"
-                  className="scratch-icon-animate absolute left-1/2 object-contain pointer-events-none z-30 opacity-90"
+                  className={`scratch-icon-animate absolute left-1/2 object-contain pointer-events-none z-30 opacity-90 ${
+                    isRevealed ? "hidden" : ""
+                  }`}
                   style={{
                     top: 75,
                     width: "auto",

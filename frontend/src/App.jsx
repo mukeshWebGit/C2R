@@ -6,6 +6,8 @@ import PromoCode from "./pages/PromoCode";
 import PersonalDetails from "./pages/PersonalDetails";
 import Scratch from "./pages/Scratch";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Congratulations from "./pages/Congratulations";
+import UploadDocuments from "./pages/UploadDocuments";
 
 function App() {
   return (
@@ -26,6 +28,22 @@ function App() {
           element={
             <ProtectedRoute>
               <Scratch />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/congratulations/:mobile"
+          element={
+            <ProtectedRoute>
+              <Congratulations />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/upload-documents/:mobile"
+          element={
+            <ProtectedRoute>
+              <UploadDocuments />
             </ProtectedRoute>
           }
         />

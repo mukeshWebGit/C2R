@@ -13,6 +13,12 @@ const userSchema = new mongoose.Schema({
   promoCode: String,
   giftName: String,
   giftImage: String,
+  documents: {
+    idProof: String,
+    invoiceCopy: String,
+    scratchCard: String,
+    uploadedAt: Date,
+  },
 });
 
 const User = mongoose.model("User", userSchema);

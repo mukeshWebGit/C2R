@@ -76,7 +76,7 @@ const ValidateOtp = () => {
     setOtp(value);
     if (otpError) setOtpError(validateOtp(value));
   };
-
+ 
   return (
     <main className="flex flex-col lg:flex-row w-full font-lato">
       {/* Left Section: Illustration Area */}

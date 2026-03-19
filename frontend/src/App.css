@@ -48,7 +48,7 @@ body {
 .pink-wavy-bg {
     /* Put gradient + image on the element itself (no ::before overlay) */
     background-image:
-        url('../images/scrach-bg.png');
+        url('../src/assets/images/scrach-bg.png');
     background-size: cover, cover;
     background-color: #fff8f8;
     background-position: center, center;
