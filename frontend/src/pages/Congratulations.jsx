@@ -91,7 +91,7 @@ const Congratulations = () => {
     <main
       className="font-lato min-h-screen w-full flex md:items-center justify-end md:p-4"
       style={{
-        backgroundImage: "url(/src/assets/images/hero2.jpg)",
+        backgroundImage: "url(/images/hero2.jpg)",
         backgroundSize: "cover",
         backgroundPosition: "left center",
         backgroundRepeat: "no-repeat",
