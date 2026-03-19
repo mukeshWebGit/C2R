@@ -147,6 +147,7 @@ const UploadDocuments = () => {
         return;
       }
       setSubmitted(true);
+      navigate(`/activation/${encodeURIComponent(mobile || "")}`);
     } catch (err) {
       setSubmitError(err?.message || "Unable to upload documents. Please try again.");
     } finally {

@@ -8,6 +8,7 @@ import Scratch from "./pages/Scratch";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Congratulations from "./pages/Congratulations";
 import UploadDocuments from "./pages/UploadDocuments";
+import Activation from "./pages/Activation";
 
 function App() {
   return (
@@ -44,6 +45,14 @@ function App() {
           element={
             <ProtectedRoute>
               <UploadDocuments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/activation/:mobile"
+          element={
+            <ProtectedRoute>
+              <Activation />
             </ProtectedRoute>
           }
         />
