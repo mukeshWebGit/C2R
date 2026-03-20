@@ -5,6 +5,8 @@ import heroDesktop from "../assets/images/hero.jpg";
 import logo from "../assets/images/logo.png";
 import { API_BASE } from "../config/api";
 
+const OTP_STORAGE_PREFIX = "c2r_otp_";
+
 const ValidateOtp = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -23,9 +25,10 @@ const ValidateOtp = () => {
   }, [mobileFromState, navigate]);
 
   const validateOtp = (value) => {
-    if (!value.trim()) return "Activation code is required.";
-    if (!/^[A-Za-z0-9]{4,12}$/.test(value.trim()))
-      return "Enter a valid activation code.";
+    const v = value.trim();
+    if (!v) return "OTP is required.";
+    if (!/^[0-9]{6}$/.test(v))
+      return "Enter the 6-digit OTP from the alert.";
     return "";
   };
 
@@ -38,6 +41,20 @@ const ValidateOtp = () => {
 
     if (!mobileFromState) {
       setOtpError("Mobile number is missing. Please go back and enter it.");
+      return;
+    }
+
+    const expectedOtp = sessionStorage.getItem(
+      `${OTP_STORAGE_PREFIX}${mobileFromState}`
+    );
+    if (!expectedOtp) {
+      setOtpError(
+        "OTP session expired. Go back to the home page and request a new OTP."
+      );
+      return;
+    }
+    if (otp.trim() !== expectedOtp) {
+      setOtpError("Invalid OTP. Use the same 6-digit code from the alert.");
       return;
     }
 
@@ -57,9 +74,19 @@ const ValidateOtp = () => {
       if (!res.ok) {
         setOtpError(data.message || "Unable to verify mobile.");
       } else if (data.exists) {
+        try {
+          sessionStorage.removeItem(`${OTP_STORAGE_PREFIX}${mobileFromState}`);
+        } catch {
+          /* ignore */
+        }
         localStorage.setItem("c2r_session", "1");
         navigate(`/scratch/${encodeURIComponent(mobileFromState)}`);
       } else {
+        try {
+          sessionStorage.removeItem(`${OTP_STORAGE_PREFIX}${mobileFromState}`);
+        } catch {
+          /* ignore */
+        }
         navigate("/promo-code", {
           state: { mobileNumber: mobileFromState },
         });
@@ -72,7 +99,7 @@ const ValidateOtp = () => {
   };
 
   const handleChange = (e) => {
-    const value = e.target.value.toUpperCase();
+    const value = e.target.value.replace(/\D/g, "").slice(0, 6);
     setOtp(value);
     if (otpError) setOtpError(validateOtp(value));
   };
@@ -112,10 +139,11 @@ const ValidateOtp = () => {
           </h1>
 
           <p className="text-sm md:text-base text-gray-500 leading-relaxed text-center mb-6">
-            Activation code has been sent to{" "}
+            Use the 6-digit OTP shown in the browser alert for{" "}
             <span className="font-semibold text-gray-700">
               {mobileDisplay}
             </span>
+            .
           </p>
 
           <form
@@ -150,12 +178,13 @@ const ValidateOtp = () => {
                 </svg>
                 <input
                   type="text"
-                  className="flex-1 border-none outline-none text-[16px] text-gray-800 bg-transparent placeholder:text-gray-400 focus:text-gray-800 tracking-[0.2em] uppercase"
-                  placeholder="Enter Activation Code"
+                  className="flex-1 border-none outline-none text-[16px] text-gray-800 bg-transparent placeholder:text-gray-400 focus:text-gray-800 tracking-[0.2em]"
+                  placeholder="Enter 6-digit OTP"
+                  inputMode="numeric"
                   value={otp}
                   onChange={handleChange}
                   onBlur={() => setOtpError(validateOtp(otp))}
-                  maxLength={12}
+                  maxLength={6}
                   required
                 />
               </div>

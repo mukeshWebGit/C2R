@@ -4,6 +4,12 @@ import bannerMobile from "../assets/images/banner-m.jpg";
 import heroDesktop from "../assets/images/hero.jpg";
 import logo from "../assets/images/logo.png";
 
+const OTP_STORAGE_PREFIX = "c2r_otp_";
+
+/** 6-digit demo OTP (shown in alert; same value must be entered on validate page) */
+const generateOtp = () =>
+  String(Math.floor(100000 + Math.random() * 900000));
+
 const RedeemGift = () => {
   const navigate = useNavigate();
   const [mobileNumber, setMobileNumber] = useState("");
@@ -33,13 +39,23 @@ const RedeemGift = () => {
 
     setIsSubmitting(true);
 
-    // TODO: send mobile/email to backend if needed
+    const digitsOnly = mobileNumber.replace(/\D/g, "");
+    const otp = generateOtp();
+    try {
+      sessionStorage.setItem(`${OTP_STORAGE_PREFIX}${digitsOnly}`, otp);
+    } catch {
+      // ignore storage errors
+    }
+
+    // Demo: same OTP must be used on the next screen for validation
+    alert(`Your OTP is: ${otp}`);
+
     setTimeout(() => {
       setIsSubmitting(false);
       navigate("/validate-otp", {
-        state: { mobileNumber },
+        state: { mobileNumber: digitsOnly },
       });
-    }, 500);
+    }, 300);
   };
 
   const handleMobileChange = (e) => {
