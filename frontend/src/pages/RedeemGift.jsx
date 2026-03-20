@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import bannerMobile from "../assets/images/banner-m.jpg";
 import heroDesktop from "../assets/images/hero.jpg";
 import logo from "../assets/images/logo.png";
@@ -12,9 +12,22 @@ const generateOtp = () =>
 
 const RedeemGift = () => {
   const navigate = useNavigate();
-  const [mobileNumber, setMobileNumber] = useState("");
+  const location = useLocation();
+  const mobileFromState = location.state?.mobileNumber;
+
+  const [mobileNumber, setMobileNumber] = useState(() => {
+    const digits = (mobileFromState || "").toString().replace(/\D/g, "");
+    return digits;
+  });
   const [mobileError, setMobileError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const digits = (mobileFromState || "").toString().replace(/\D/g, "");
+    setMobileNumber(digits);
+    if (mobileError) setMobileError("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mobileFromState]);
 
   const validateMobile = (value) => {
     if (!value.trim()) {

@@ -32,6 +32,29 @@ const ValidateOtp = () => {
     return "";
   };
 
+  const handleResend = () => {
+    if (!mobileFromState) {
+      setOtpError("Mobile number is missing. Please go back and enter it.");
+      navigate("/");
+      return;
+    }
+
+    const expectedOtp = sessionStorage.getItem(
+      `${OTP_STORAGE_PREFIX}${mobileFromState}`
+    );
+
+    if (!expectedOtp) {
+      setOtpError(
+        "OTP session expired. Go back to the home page and request a new OTP."
+      );
+      return;
+    }
+
+    setOtpError("");
+    setOtp("");
+    alert(`Your OTP is: ${expectedOtp}`);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -139,11 +162,45 @@ const ValidateOtp = () => {
           </h1>
 
           <p className="text-sm md:text-base text-gray-500 leading-relaxed text-center mb-6">
-            Use the 6-digit OTP shown in the browser alert for{" "}
-            <span className="font-semibold text-gray-700">
+            Activation codes has been sent to{" "}
+            <span className="font-bold" style={{ color: "#D96401" }}>
               {mobileDisplay}
             </span>
-            .
+            <a
+              href="#"
+              role="button"
+              aria-label="Edit mobile number"
+              style={{ color: "#D96401" }}
+              className="inline-flex items-center justify-center ml-2 hover:opacity-90"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/", { state: { mobileNumber: mobileFromState } });
+              }}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 20h9"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 18l-4 1 1-4L16.5 3.5z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </a>
+            <br />
+            Please dial our Helpline Nos. for any assistance.
           </p>
 
           <form
@@ -195,6 +252,24 @@ const ValidateOtp = () => {
               >
                 {otpError || " "}
               </span>
+
+              <div className="flex justify-end">
+                <a
+                  href="#"
+                  role="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (isSubmitting) return;
+                    handleResend();
+                  }}
+                  style={{ color: "#D96401" }}
+                  className={`text-xs md:text-sm underline hover:opacity-90 ${
+                    isSubmitting ? "opacity-60 cursor-not-allowed" : ""
+                  }`}
+                >
+                  Resend Code
+                </a>
+              </div>
             </div>
 
             <button
@@ -205,14 +280,6 @@ const ValidateOtp = () => {
               {isSubmitting ? "Verifying..." : "Submit"}
             </button>
           </form>
-
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="mt-4 self-center text-xs text-gray-500 hover:text-blue-600 underline"
-          >
-            Back to details
-          </button>
 
           <footer className="flex items-center justify-center gap-2 absolute bottom-[10px] left-0 right-0">
             <a
