@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import bannerMobile from "../assets/images/banner-m.jpg";
 import heroDesktop from "../assets/images/hero.jpg";
@@ -15,6 +15,11 @@ const ValidateOtp = () => {
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mobileCheckLoading, setMobileCheckLoading] = useState(false);
+  const [mobileExists, setMobileExists] = useState(null);
+  const [mobileCheckError, setMobileCheckError] = useState("");
+
+  const mobileCheckPromiseRef = useRef(null);
 
   const mobileDisplay = mobileFromState || "your mobile number";
 
@@ -23,6 +28,60 @@ const ValidateOtp = () => {
       navigate("/");
     }
   }, [mobileFromState, navigate]);
+
+  // Preload mobile existence check once.
+  // This makes Submit fast (no extra network request on button click).
+  useEffect(() => {
+    if (!mobileFromState) return;
+
+    setMobileCheckLoading(true);
+    setMobileCheckError("");
+    setMobileExists(null);
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+
+    mobileCheckPromiseRef.current = (async () => {
+      const res = await fetch(`${API_BASE}/api/users/check-mobile`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ mobile: mobileFromState }),
+        signal: controller.signal,
+      });
+
+      let data = {};
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        data = { message: text };
+      }
+
+      if (!res.ok) {
+        throw new Error(data.message || "Unable to verify mobile.");
+      }
+      return Boolean(data.exists);
+    })();
+
+    mobileCheckPromiseRef.current
+      .then((exists) => {
+        setMobileExists(exists);
+      })
+      .catch((err) => {
+        setMobileCheckError(err?.message || "Unable to verify mobile.");
+      })
+      .finally(() => {
+        setMobileCheckLoading(false);
+      });
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [mobileFromState]);
 
   const validateOtp = (value) => {
     const v = value.trim();
@@ -82,40 +141,44 @@ const ValidateOtp = () => {
     }
 
     setIsSubmitting(true);
-
     try {
-      const res = await fetch(`${API_BASE}/api/users/check-mobile`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ mobile: mobileFromState }),
-      });
+      let exists = mobileExists;
 
-      const data = await res.json();
+      // If preload isn't finished yet, wait briefly for it.
+      if (exists === null && mobileCheckPromiseRef.current) {
+        exists = await Promise.race([
+          mobileCheckPromiseRef.current,
+          new Promise((_, reject) =>
+            window.setTimeout(() => reject(new Error("Mobile check timeout")), 4000)
+          ),
+        ]);
+      }
 
-      if (!res.ok) {
-        setOtpError(data.message || "Unable to verify mobile.");
-      } else if (data.exists) {
-        try {
-          sessionStorage.removeItem(`${OTP_STORAGE_PREFIX}${mobileFromState}`);
-        } catch {
-          /* ignore */
-        }
-        localStorage.setItem("c2r_session", "1");
+      if (exists === null) {
+        setOtpError(
+          mobileCheckError || "Checking mobile. Please try again in a moment."
+        );
+        return;
+      }
+
+      try {
+        sessionStorage.removeItem(
+          `${OTP_STORAGE_PREFIX}${mobileFromState}`
+        );
+      } catch {
+        /* ignore */
+      }
+
+      localStorage.setItem("c2r_session", "1");
+      if (exists) {
         navigate(`/scratch/${encodeURIComponent(mobileFromState)}`);
       } else {
-        try {
-          sessionStorage.removeItem(`${OTP_STORAGE_PREFIX}${mobileFromState}`);
-        } catch {
-          /* ignore */
-        }
         navigate("/promo-code", {
           state: { mobileNumber: mobileFromState },
         });
       }
     } catch (err) {
-      setOtpError("Unable to check mobile. Please try again.");
+      setOtpError(err?.message || "Unable to check mobile. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
