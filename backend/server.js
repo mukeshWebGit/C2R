@@ -50,20 +50,39 @@ app.post("/api/register", async (req, res) => {
     }
 
     const normalizedPromo = promoCode.trim().toUpperCase();
-    const promo = await PromoCode.findOne({ code: normalizedPromo }).lean();
+    const promo = await PromoCode.findOneAndUpdate(
+      { code: normalizedPromo, used: false },
+      { $set: { used: true } },
+      { new: true }
+    ).lean();
+    if (!promo) {
+      return res
+        .status(400)
+        .json({ message: "Invalid or already used promotional code." });
+    }
 
-    const user = await User.create({
-      mobile,
-      name,
-      email,
-      address,
-      city,
-      state,
-      pincode,
-      promoCode: normalizedPromo,
-      giftName: promo?.gift || "",
-      giftImage: promo?.image || "",
-    });
+    let user;
+    try {
+      user = await User.create({
+        mobile,
+        name,
+        email,
+        address,
+        city,
+        state,
+        pincode,
+        promoCode: normalizedPromo,
+        giftName: promo?.gift || "",
+        giftImage: promo?.image || "",
+      });
+    } catch (createErr) {
+      // Best-effort rollback so promo remains unused if registration fails.
+      await PromoCode.updateOne(
+        { _id: promo._id, used: true },
+        { $set: { used: false } }
+      );
+      throw createErr;
+    }
 
     return res
       .status(201)

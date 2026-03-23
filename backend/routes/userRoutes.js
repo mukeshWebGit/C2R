@@ -117,10 +117,6 @@ router.post("/verify-code", async (req, res) => {
         .json({ message: "This promotional code has already been used." });
     }
 
-    // Mark as used on successful verification
-    promo.used = true;
-    await promo.save();
-
     return res.json({
       message: "Code verified.",
       gift: promo.gift,
@@ -152,6 +148,21 @@ router.post("/save-user", async (req, res) => {
   }
 
   try {
+    const normalizedPromo = String(promoCode || "").trim().toUpperCase();
+    let promo = null;
+    if (normalizedPromo) {
+      promo = await PromoCode.findOneAndUpdate(
+        { code: normalizedPromo, used: false },
+        { $set: { used: true } },
+        { new: true }
+      ).lean();
+      if (!promo) {
+        return res
+          .status(400)
+          .json({ message: "Invalid or already used promotional code." });
+      }
+    }
+
     const user = await User.create({
       mobile,
       name,
@@ -159,8 +170,9 @@ router.post("/save-user", async (req, res) => {
       city,
       state,
       pincode,
-      promoCode,
-      giftName,
+      promoCode: normalizedPromo,
+      giftName: giftName || promo?.gift || "",
+      giftImage: promo?.image || "",
     });
 
     return res.status(201).json({ message: "User saved successfully.", userId: user._id });

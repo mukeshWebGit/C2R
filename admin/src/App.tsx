@@ -55,6 +55,46 @@ const greetingPrefix = () => {
   return "Good Evening";
 };
 
+const normalizeAssetUrl = (rawUrl: string) => {
+  const value = String(rawUrl || "").trim();
+  if (!value) return "";
+
+  const apiOrigin = (() => {
+    try {
+      return new URL(API_BASE).origin;
+    } catch {
+      return "";
+    }
+  })();
+
+  if (value.startsWith("/uploads") || value.startsWith("/images")) {
+    return `${API_BASE}${value}`;
+  }
+
+  if (value.startsWith("uploads/") || value.startsWith("images/")) {
+    return `${API_BASE}/${value}`;
+  }
+
+  try {
+    const parsed = new URL(value);
+    const isBackendFilePath =
+      parsed.pathname.startsWith("/uploads") || parsed.pathname.startsWith("/images");
+
+    // Some records store frontend/localhost host for backend files.
+    const likelyWrongHost =
+      parsed.hostname === "c2r.onrender.com" ||
+      parsed.hostname === "localhost" ||
+      parsed.hostname === "127.0.0.1";
+
+    if (apiOrigin && isBackendFilePath && likelyWrongHost) {
+      return `${apiOrigin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+    }
+    return value;
+  } catch {
+    return value;
+  }
+};
+
 const parseRoute = (pathname: string): RouteKey => {
   const p = pathname.replace(/\/+$/, "");
   if (!p || p === "/") return "login";
@@ -839,8 +879,13 @@ const UsersPage = (props: { token: string; onViewUser: (userId: string) => void 
     /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url);
 
   const openDocModal = (url: string, title: string) => {
-    if (!url) return;
-    setDocModal({ url, title, isImage: isImageUrl(url) });
+    const normalizedUrl = normalizeAssetUrl(url);
+    if (!normalizedUrl) return;
+    setDocModal({
+      url: normalizedUrl,
+      title,
+      isImage: isImageUrl(normalizedUrl),
+    });
   };
 
   const closeDocModal = () => setDocModal(null);
@@ -1334,8 +1379,13 @@ const UserDetailsPage = (props: {
     /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url);
 
   const openDocModal = (url: string, title: string) => {
-    if (!url) return;
-    setDocModal({ url, title, isImage: isImageUrl(url) });
+    const normalizedUrl = normalizeAssetUrl(url);
+    if (!normalizedUrl) return;
+    setDocModal({
+      url: normalizedUrl,
+      title,
+      isImage: isImageUrl(normalizedUrl),
+    });
   };
 
   const closeDocModal = () => setDocModal(null);
