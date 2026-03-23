@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./App.css";
 
 type Role = "MASTER" | "ADMIN";
-type RouteKey = "dashboard" | "users" | "admins" | "promocodes" | "login";
+type RouteKey = "dashboard" | "users" | "admins" | "promocodes" | "login" | "userDetails";
 
 type AdminMe = { admin: { id: string; email: string; role: Role; name: string } };
 type Stats = {
@@ -58,21 +58,33 @@ const greetingPrefix = () => {
 const parseRoute = (pathname: string): RouteKey => {
   const p = pathname.replace(/\/+$/, "");
   if (!p || p === "/") return "login";
-  const key = p.replace("/", "") as RouteKey;
-  if (
-    key === "dashboard" ||
-    key === "users" ||
-    key === "admins" ||
-    key === "promocodes" ||
-    key === "login"
-  ) {
+
+  const segments = p.split("/").filter(Boolean);
+  if (segments[0] === "users" && segments.length === 2) return "userDetails";
+
+  const key = segments[0] as RouteKey;
+  if (key === "dashboard" || key === "users" || key === "admins" || key === "promocodes" || key === "login") {
     return key;
   }
   return "dashboard";
 };
 
+const getUserDetailsIdFromPath = (pathname: string): string => {
+  const p = pathname.replace(/\/+$/, "");
+  if (!p || p === "/") return "";
+  const segments = p.split("/").filter(Boolean);
+  if (segments[0] === "users" && segments.length === 2) return segments[1] || "";
+  return "";
+};
+
 const navigateTo = (to: RouteKey) => {
   const newPath = to === "login" ? "/login" : `/${to}`;
+  window.history.pushState({}, "", newPath);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+};
+
+const navigateToUserDetails = (userId: string) => {
+  const newPath = `/users/${userId}`;
   window.history.pushState({}, "", newPath);
   window.dispatchEvent(new PopStateEvent("popstate"));
 };
@@ -106,6 +118,9 @@ const App = () => {
   const [route, setRoute] = useState<RouteKey>(() =>
     parseRoute(window.location.pathname)
   );
+  const [userDetailsId, setUserDetailsId] = useState<string>(() =>
+    getUserDetailsIdFromPath(window.location.pathname)
+  );
   const [token, setToken] = useState<string>(() =>
     localStorage.getItem(ADMIN_TOKEN_KEY) || ""
   );
@@ -119,7 +134,10 @@ const App = () => {
   );
 
   useEffect(() => {
-    const onPop = () => setRoute(parseRoute(window.location.pathname));
+    const onPop = () => {
+      setRoute(parseRoute(window.location.pathname));
+      setUserDetailsId(getUserDetailsIdFromPath(window.location.pathname));
+    };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
@@ -202,7 +220,13 @@ const App = () => {
           onLogout={logout}
         >
           {route === "users" ? (
-            <UsersPage token={token} />
+            <UsersPage token={token} onViewUser={navigateToUserDetails} />
+          ) : route === "userDetails" ? (
+            <UserDetailsPage
+              token={token}
+              userId={userDetailsId}
+              onBack={() => navigateTo("users")}
+            />
           ) : route === "admins" ? (
             canAccessAdmins ? (
               <AdminsPage token={token} />
@@ -801,7 +825,7 @@ const VisitorsBars = () => {
   );
 };
 
-const UsersPage = (props: { token: string }) => {
+const UsersPage = (props: { token: string; onViewUser: (userId: string) => void }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [users, setUsers] = useState<UserDoc[]>([]);
@@ -809,6 +833,26 @@ const UsersPage = (props: { token: string }) => {
   const [editingId, setEditingId] = useState<string>("");
   const [viewingId, setViewingId] = useState<string>("");
   const [form, setForm] = useState<Partial<UserDoc>>({});
+  const [docModal, setDocModal] = useState<null | { url: string; title: string; isImage: boolean }>(null);
+
+  const isImageUrl = (url: string) =>
+    /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url);
+
+  const openDocModal = (url: string, title: string) => {
+    if (!url) return;
+    setDocModal({ url, title, isImage: isImageUrl(url) });
+  };
+
+  const closeDocModal = () => setDocModal(null);
+
+  useEffect(() => {
+    if (!docModal) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeDocModal();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [docModal]);
 
   useEffect(() => {
     setLoading(true);
@@ -826,9 +870,11 @@ const UsersPage = (props: { token: string }) => {
   };
 
   const startView = (u: UserDoc) => {
-    setViewingId(u._id);
+    // Route to dedicated details page
+    setViewingId("");
     setEditingId("");
     setForm({});
+    props.onViewUser(u._id);
   };
 
   const cancelEdit = () => {
@@ -943,9 +989,13 @@ const UsersPage = (props: { token: string }) => {
             <div className="adminLabel">Gift Image</div>
             <div>
               {viewingUser.giftImage ? (
-                <a href={viewingUser.giftImage} target="_blank" rel="noreferrer">
+                <button
+                  className="adminLinkBtn"
+                  type="button"
+                  onClick={() => openDocModal(viewingUser.giftImage || "", "Gift image")}
+                >
                   View image
-                </a>
+                </button>
               ) : (
                 "-"
               )}
@@ -957,9 +1007,15 @@ const UsersPage = (props: { token: string }) => {
             <div className="adminLabel">ID Proof</div>
             <div>
               {viewingUser.documents?.idProof ? (
-                <a href={viewingUser.documents.idProof} target="_blank" rel="noreferrer">
+                <button
+                  className="adminLinkBtn"
+                  type="button"
+                  onClick={() =>
+                    openDocModal(viewingUser.documents?.idProof || "", "ID proof")
+                  }
+                >
                   View
-                </a>
+                </button>
               ) : (
                 "-"
               )}
@@ -968,9 +1024,18 @@ const UsersPage = (props: { token: string }) => {
             <div className="adminLabel">Invoice Copy</div>
             <div>
               {viewingUser.documents?.invoiceCopy ? (
-                <a href={viewingUser.documents.invoiceCopy} target="_blank" rel="noreferrer">
+                <button
+                  className="adminLinkBtn"
+                  type="button"
+                  onClick={() =>
+                    openDocModal(
+                      viewingUser.documents?.invoiceCopy || "",
+                      "Invoice copy"
+                    )
+                  }
+                >
                   View
-                </a>
+                </button>
               ) : (
                 "-"
               )}
@@ -979,9 +1044,18 @@ const UsersPage = (props: { token: string }) => {
             <div className="adminLabel">Scratch Card</div>
             <div>
               {viewingUser.documents?.scratchCard ? (
-                <a href={viewingUser.documents.scratchCard} target="_blank" rel="noreferrer">
+                <button
+                  className="adminLinkBtn"
+                  type="button"
+                  onClick={() =>
+                    openDocModal(
+                      viewingUser.documents?.scratchCard || "",
+                      "Scratch card"
+                    )
+                  }
+                >
                   View
-                </a>
+                </button>
               ) : (
                 "-"
               )}
@@ -1171,6 +1245,327 @@ const UsersPage = (props: { token: string }) => {
           ) : null}
         </>
       )}
+      {docModal ? (
+        <div
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeDocModal();
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 10,
+              width: "min(980px, 100%)",
+              maxHeight: "90vh",
+              overflow: "auto",
+              padding: 16,
+              boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ fontWeight: 700 }}>{docModal.title}</div>
+              <button
+                type="button"
+                onClick={closeDocModal}
+                style={{
+                  background: "transparent",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 8,
+                  padding: "6px 10px",
+                  cursor: "pointer",
+                }}
+              >
+                Close
+              </button>
+            </div>
+
+            {docModal.isImage ? (
+              <img
+                src={docModal.url}
+                alt={docModal.title}
+                style={{ maxWidth: "100%", maxHeight: "80vh", display: "block", margin: "0 auto" }}
+              />
+            ) : (
+              <iframe
+                src={docModal.url}
+                title={docModal.title}
+                style={{ width: "100%", height: "80vh", border: "none" }}
+              />
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+const UserDetailsPage = (props: {
+  token: string;
+  userId: string;
+  onBack: () => void;
+}) => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [user, setUser] = useState<UserDoc | null>(null);
+  const [docModal, setDocModal] = useState<null | {
+    url: string;
+    title: string;
+    isImage: boolean;
+  }>(null);
+
+  const isImageUrl = (url: string) =>
+    /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url);
+
+  const openDocModal = (url: string, title: string) => {
+    if (!url) return;
+    setDocModal({ url, title, isImage: isImageUrl(url) });
+  };
+
+  const closeDocModal = () => setDocModal(null);
+
+  useEffect(() => {
+    if (!props.userId) {
+      setLoading(false);
+      setError("Missing user id.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    apiFetch<{ user: UserDoc }>(`/api/admin/users/${props.userId}`, props.token)
+      .then((data) => setUser(data.user))
+      .catch((err) => setError(err?.message || "Unable to load user"))
+      .finally(() => setLoading(false));
+  }, [props.token, props.userId]);
+
+  useEffect(() => {
+    if (!docModal) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeDocModal();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [docModal]);
+
+  return (
+    <div className="adminLayout">
+      <div className="adminCard">
+        <div className="adminCardHeader">
+          <h2>User Details</h2>
+        </div>
+
+        {loading ? <p>Loading...</p> : null}
+        {error ? <div className="adminErrorBlock">{error}</div> : null}
+
+        {user ? (
+          <>
+            <div className="adminFormGrid">
+              <div className="adminLabel">Mobile</div>
+              <div>{user.mobile || "-"}</div>
+
+              <div className="adminLabel">Name</div>
+              <div>{user.name || "-"}</div>
+
+              <div className="adminLabel">Email</div>
+              <div>{user.email || "-"}</div>
+
+              <div className="adminLabel">Address</div>
+              <div>{user.address || "-"}</div>
+
+              <div className="adminLabel">City</div>
+              <div>{user.city || "-"}</div>
+
+              <div className="adminLabel">State</div>
+              <div>{user.state || "-"}</div>
+
+              <div className="adminLabel">Pincode</div>
+              <div>{user.pincode || "-"}</div>
+
+              <div className="adminLabel">Promo Code</div>
+              <div>{user.promoCode || "-"}</div>
+
+              <div className="adminLabel">Gift Name</div>
+              <div>{user.giftName || "-"}</div>
+
+              <div className="adminLabel">Gift Image</div>
+              <div>
+                {user.giftImage ? (
+                  <button
+                    className="adminLinkBtn"
+                    type="button"
+                    onClick={() => openDocModal(user.giftImage || "", "Gift image")}
+                  >
+                    View image
+                  </button>
+                ) : (
+                  "-"
+                )}
+              </div>
+
+              <div className="adminLabel">Documents Uploaded</div>
+              <div>{user.documents?.uploadedAt ? "Yes" : "No"}</div>
+
+              <div className="adminLabel">ID Proof</div>
+              <div>
+                {user.documents?.idProof ? (
+                  <button
+                    className="adminLinkBtn"
+                    type="button"
+                    onClick={() =>
+                      openDocModal(user.documents?.idProof || "", "ID proof")
+                    }
+                  >
+                    View
+                  </button>
+                ) : (
+                  "-"
+                )}
+              </div>
+
+              <div className="adminLabel">Invoice Copy</div>
+              <div>
+                {user.documents?.invoiceCopy ? (
+                  <button
+                    className="adminLinkBtn"
+                    type="button"
+                    onClick={() =>
+                      openDocModal(
+                        user.documents?.invoiceCopy || "",
+                        "Invoice copy"
+                      )
+                    }
+                  >
+                    View
+                  </button>
+                ) : (
+                  "-"
+                )}
+              </div>
+
+              <div className="adminLabel">Scratch Card</div>
+              <div>
+                {user.documents?.scratchCard ? (
+                  <button
+                    className="adminLinkBtn"
+                    type="button"
+                    onClick={() =>
+                      openDocModal(
+                        user.documents?.scratchCard || "",
+                        "Scratch card"
+                      )
+                    }
+                  >
+                    View
+                  </button>
+                ) : (
+                  "-"
+                )}
+              </div>
+            </div>
+
+            <div className="adminActionsRow">
+              <button
+                className="adminSecondaryBtn"
+                type="button"
+                onClick={props.onBack}
+                disabled={loading}
+              >
+                Back
+              </button>
+            </div>
+          </>
+        ) : null}
+      </div>
+
+      {docModal ? (
+        <div
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeDocModal();
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 10,
+              width: "min(980px, 100%)",
+              maxHeight: "90vh",
+              overflow: "auto",
+              padding: 16,
+              boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ fontWeight: 700 }}>{docModal.title}</div>
+              <button
+                type="button"
+                onClick={closeDocModal}
+                style={{
+                  background: "transparent",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 8,
+                  padding: "6px 10px",
+                  cursor: "pointer",
+                }}
+              >
+                Close
+              </button>
+            </div>
+
+            {docModal.isImage ? (
+              <img
+                src={docModal.url}
+                alt={docModal.title}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "80vh",
+                  display: "block",
+                  margin: "0 auto",
+                }}
+              />
+            ) : (
+              <iframe
+                src={docModal.url}
+                title={docModal.title}
+                style={{ width: "100%", height: "80vh", border: "none" }}
+              />
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };

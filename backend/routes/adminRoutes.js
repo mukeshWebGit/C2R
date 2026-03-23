@@ -161,6 +161,23 @@ router.get(
   }
 );
 
+// GET /api/admin/users/:id
+router.get(
+  "/users/:id",
+  ensureAdminAuth,
+  requireRole(["MASTER", "ADMIN"]),
+  async (req, res) => {
+    const { id } = req.params;
+    try {
+      const user = await User.findById(id).lean();
+      if (!user) return res.status(404).json({ message: "User not found." });
+      return res.json({ user });
+    } catch {
+      return res.status(400).json({ message: "Invalid user id." });
+    }
+  }
+);
+
 router.put(
   "/users/:id",
   ensureAdminAuth,
