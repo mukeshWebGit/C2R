@@ -42,7 +42,7 @@ type PromoDoc = {
 };
 
 const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+  import.meta.env.VITE_API_BASE_URL || "https://c2r-backend.onrender.com";
 
 const ADMIN_TOKEN_KEY = "admin_token";
 const ADMIN_ROLE_KEY = "admin_role";
@@ -423,18 +423,7 @@ const LoginPage = (props: {
             </a>
           </div>
 
-          <div className="loginOr">Or Login With</div>
-          <div className="loginSocial">
-            <div className="loginSocialBtn" aria-hidden="true">
-              f
-            </div>
-            <div className="loginSocialBtn" aria-hidden="true">
-              t
-            </div>
-            <div className="loginSocialBtn" aria-hidden="true">
-              G
-            </div>
-          </div>
+         
         </div>
       </div>
     </div>
