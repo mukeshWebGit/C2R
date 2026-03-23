@@ -807,6 +807,7 @@ const UsersPage = (props: { token: string }) => {
   const [users, setUsers] = useState<UserDoc[]>([]);
 
   const [editingId, setEditingId] = useState<string>("");
+  const [viewingId, setViewingId] = useState<string>("");
   const [form, setForm] = useState<Partial<UserDoc>>({});
 
   useEffect(() => {
@@ -820,12 +821,23 @@ const UsersPage = (props: { token: string }) => {
 
   const startEdit = (u: UserDoc) => {
     setEditingId(u._id);
+    setViewingId("");
     setForm({ ...u });
+  };
+
+  const startView = (u: UserDoc) => {
+    setViewingId(u._id);
+    setEditingId("");
+    setForm({});
   };
 
   const cancelEdit = () => {
     setEditingId("");
     setForm({});
+  };
+
+  const closeView = () => {
+    setViewingId("");
   };
 
   const save = async () => {
@@ -875,6 +887,8 @@ const UsersPage = (props: { token: string }) => {
         props.token
       );
       setUsers(data.users || []);
+      setViewingId("");
+      cancelEdit();
     } catch (err: any) {
       setError(err?.message || "Unable to delete user");
     } finally {
@@ -882,118 +896,281 @@ const UsersPage = (props: { token: string }) => {
     }
   };
 
+  const viewingUser = viewingId ? users.find((u) => u._id === viewingId) : null;
+
   return (
     <div className="adminLayout">
-      <div className="adminCard">
-        <div className="adminCardHeader">
-          <h2>Users</h2>
-        </div>
-        {loading ? <p>Loading...</p> : null}
-        {error ? <div className="adminErrorBlock">{error}</div> : null}
-        <div className="adminTableWrap">
-          <table className="adminTable">
-            <thead>
-              <tr>
-                <th>Mobile</th>
-                <th>Name</th>
-                <th>Promo</th>
-                <th>Gift</th>
-                <th>Docs</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => {
-                const docsUploaded = Boolean(u.documents?.uploadedAt);
-                return (
-                  <tr key={u._id}>
-                    <td>{u.mobile}</td>
-                    <td>{u.name || "-"}</td>
-                    <td>{u.promoCode || "-"}</td>
-                    <td>{u.giftName || "-"}</td>
-                    <td>{docsUploaded ? "Yes" : "No"}</td>
-                    <td>
-                      <button
-                        className="adminLinkBtn"
-                        type="button"
-                        onClick={() => startEdit(u)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="adminLinkBtn adminDanger"
-                        type="button"
-                        onClick={() => del(u._id)}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {users.length === 0 && !loading ? (
-                <tr>
-                  <td colSpan={6} className="adminEmptyCell">
-                    No users found.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {editingId ? (
+      {viewingUser ? (
         <div className="adminCard">
-          <h2>Edit User</h2>
-          <div className="adminFormGrid">
-            <label className="adminLabel">
-              Name
-              <input className="adminInput" value={form.name || ""} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
-            </label>
-            <label className="adminLabel">
-              Email
-              <input className="adminInput" value={form.email || ""} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} />
-            </label>
-            <label className="adminLabel">
-              Address
-              <input className="adminInput" value={form.address || ""} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} />
-            </label>
-            <label className="adminLabel">
-              City
-              <input className="adminInput" value={form.city || ""} onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))} />
-            </label>
-            <label className="adminLabel">
-              State
-              <input className="adminInput" value={form.state || ""} onChange={(e) => setForm((p) => ({ ...p, state: e.target.value }))} />
-            </label>
-            <label className="adminLabel">
-              Pincode
-              <input className="adminInput" value={form.pincode || ""} onChange={(e) => setForm((p) => ({ ...p, pincode: e.target.value }))} />
-            </label>
-            <label className="adminLabel">
-              Promo Code
-              <input className="adminInput" value={form.promoCode || ""} onChange={(e) => setForm((p) => ({ ...p, promoCode: e.target.value }))} />
-            </label>
-            <label className="adminLabel">
-              Gift Name
-              <input className="adminInput" value={form.giftName || ""} onChange={(e) => setForm((p) => ({ ...p, giftName: e.target.value }))} />
-            </label>
-            <label className="adminLabel">
-              Gift Image
-              <input className="adminInput" value={form.giftImage || ""} onChange={(e) => setForm((p) => ({ ...p, giftImage: e.target.value }))} />
-            </label>
+          <div className="adminCardHeader">
+            <h2>User Details</h2>
           </div>
-          <div className="adminActionsRow">
-            <button className="adminPrimaryBtn" type="button" onClick={save} disabled={loading}>
-              Save
+
+          <div className="adminActionsRow" style={{ marginTop: -8, marginBottom: 10 }}>
+            <button className="adminSecondaryBtn" type="button" onClick={closeView} disabled={loading}>
+              Back
             </button>
-            <button className="adminSecondaryBtn" type="button" onClick={cancelEdit} disabled={loading}>
-              Cancel
-            </button>
+          </div>
+
+          <div className="adminFormGrid">
+            <div className="adminLabel">Mobile</div>
+            <div>{viewingUser.mobile || "-"}</div>
+
+            <div className="adminLabel">Name</div>
+            <div>{viewingUser.name || "-"}</div>
+
+            <div className="adminLabel">Email</div>
+            <div>{viewingUser.email || "-"}</div>
+
+            <div className="adminLabel">Address</div>
+            <div>{viewingUser.address || "-"}</div>
+
+            <div className="adminLabel">City</div>
+            <div>{viewingUser.city || "-"}</div>
+
+            <div className="adminLabel">State</div>
+            <div>{viewingUser.state || "-"}</div>
+
+            <div className="adminLabel">Pincode</div>
+            <div>{viewingUser.pincode || "-"}</div>
+
+            <div className="adminLabel">Promo Code</div>
+            <div>{viewingUser.promoCode || "-"}</div>
+
+            <div className="adminLabel">Gift Name</div>
+            <div>{viewingUser.giftName || "-"}</div>
+
+            <div className="adminLabel">Gift Image</div>
+            <div>
+              {viewingUser.giftImage ? (
+                <a href={viewingUser.giftImage} target="_blank" rel="noreferrer">
+                  View image
+                </a>
+              ) : (
+                "-"
+              )}
+            </div>
+
+            <div className="adminLabel">Documents Uploaded</div>
+            <div>{viewingUser.documents?.uploadedAt ? "Yes" : "No"}</div>
+
+            <div className="adminLabel">ID Proof</div>
+            <div>
+              {viewingUser.documents?.idProof ? (
+                <a href={viewingUser.documents.idProof} target="_blank" rel="noreferrer">
+                  View
+                </a>
+              ) : (
+                "-"
+              )}
+            </div>
+
+            <div className="adminLabel">Invoice Copy</div>
+            <div>
+              {viewingUser.documents?.invoiceCopy ? (
+                <a href={viewingUser.documents.invoiceCopy} target="_blank" rel="noreferrer">
+                  View
+                </a>
+              ) : (
+                "-"
+              )}
+            </div>
+
+            <div className="adminLabel">Scratch Card</div>
+            <div>
+              {viewingUser.documents?.scratchCard ? (
+                <a href={viewingUser.documents.scratchCard} target="_blank" rel="noreferrer">
+                  View
+                </a>
+              ) : (
+                "-"
+              )}
+            </div>
           </div>
         </div>
-      ) : null}
+      ) : (
+        <>
+          <div className="adminCard">
+            <div className="adminCardHeader">
+              <h2>Users</h2>
+            </div>
+            {loading ? <p>Loading...</p> : null}
+            {error ? <div className="adminErrorBlock">{error}</div> : null}
+            <div className="adminTableWrap">
+              <table className="adminTable">
+                <thead>
+                  <tr>
+                    <th>Mobile</th>
+                    <th>Name</th>
+                    <th>Promo</th>
+                    <th>Gift</th>
+                    <th>Docs</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u) => {
+                    const docsUploaded = Boolean(u.documents?.uploadedAt);
+                    return (
+                      <tr key={u._id}>
+                        <td>{u.mobile}</td>
+                        <td>{u.name || "-"}</td>
+                        <td>{u.promoCode || "-"}</td>
+                        <td>{u.giftName || "-"}</td>
+                        <td>{docsUploaded ? "Yes" : "No"}</td>
+                        <td>
+                          <button
+                            className="adminLinkBtn"
+                            type="button"
+                            onClick={() => startView(u)}
+                            title="View user"
+                            aria-label={`View user ${u.mobile}`}
+                          >
+                            <span
+                              aria-hidden="true"
+                              style={{
+                                marginRight: 6,
+                                display: "inline-flex",
+                                verticalAlign: "middle",
+                              }}
+                            >
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M2 12C4.5 7 8.5 4 12 4C15.5 4 19.5 7 22 12C19.5 17 15.5 20 12 20C8.5 20 4.5 17 2 12Z"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinejoin="round"
+                                />
+                                <path
+                                  d="M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                />
+                              </svg>
+                            </span>
+                            View
+                          </button>
+                          <button className="adminLinkBtn" type="button" onClick={() => startEdit(u)}>
+                            Edit
+                          </button>
+                          <button
+                            className="adminLinkBtn adminDanger"
+                            type="button"
+                            onClick={() => del(u._id)}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {users.length === 0 && !loading ? (
+                    <tr>
+                      <td colSpan={6} className="adminEmptyCell">
+                        No users found.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {!viewingId && editingId ? (
+            <div className="adminCard">
+              <h2>Edit User</h2>
+              <div className="adminFormGrid">
+                <label className="adminLabel">
+                  Name
+                  <input
+                    className="adminInput"
+                    value={form.name || ""}
+                    onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                  />
+                </label>
+                <label className="adminLabel">
+                  Email
+                  <input
+                    className="adminInput"
+                    value={form.email || ""}
+                    onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                  />
+                </label>
+                <label className="adminLabel">
+                  Address
+                  <input
+                    className="adminInput"
+                    value={form.address || ""}
+                    onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
+                  />
+                </label>
+                <label className="adminLabel">
+                  City
+                  <input
+                    className="adminInput"
+                    value={form.city || ""}
+                    onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
+                  />
+                </label>
+                <label className="adminLabel">
+                  State
+                  <input
+                    className="adminInput"
+                    value={form.state || ""}
+                    onChange={(e) => setForm((p) => ({ ...p, state: e.target.value }))}
+                  />
+                </label>
+                <label className="adminLabel">
+                  Pincode
+                  <input
+                    className="adminInput"
+                    value={form.pincode || ""}
+                    onChange={(e) => setForm((p) => ({ ...p, pincode: e.target.value }))}
+                  />
+                </label>
+                <label className="adminLabel">
+                  Promo Code
+                  <input
+                    className="adminInput"
+                    value={form.promoCode || ""}
+                    onChange={(e) => setForm((p) => ({ ...p, promoCode: e.target.value }))}
+                  />
+                </label>
+                <label className="adminLabel">
+                  Gift Name
+                  <input
+                    className="adminInput"
+                    value={form.giftName || ""}
+                    onChange={(e) => setForm((p) => ({ ...p, giftName: e.target.value }))}
+                  />
+                </label>
+                <label className="adminLabel">
+                  Gift Image
+                  <input
+                    className="adminInput"
+                    value={form.giftImage || ""}
+                    onChange={(e) => setForm((p) => ({ ...p, giftImage: e.target.value }))}
+                  />
+                </label>
+              </div>
+              <div className="adminActionsRow">
+                <button className="adminPrimaryBtn" type="button" onClick={save} disabled={loading}>
+                  Save
+                </button>
+                <button className="adminSecondaryBtn" type="button" onClick={cancelEdit} disabled={loading}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </>
+      )}
     </div>
   );
 };
