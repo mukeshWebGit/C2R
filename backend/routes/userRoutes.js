@@ -203,6 +203,107 @@ router.post("/check-mobile", async (req, res) => {
   }
 });
 
+// Mark scratch completed for a user
+router.post("/flow/scratch-complete", async (req, res) => {
+  const { mobile } = req.body || {};
+  if (!mobile) {
+    return res.status(400).json({ message: "Mobile number is required." });
+  }
+  try {
+    const user = await User.findOneAndUpdate(
+      { mobile },
+      {
+        $set: {
+          "flow.scratchCompletedAt": new Date(),
+        },
+      },
+      { new: true }
+    ).lean();
+    if (!user) return res.status(404).json({ message: "User not found." });
+    return res.json({
+      message: "Scratch completion saved.",
+      scratchCompletedAt: user.flow?.scratchCompletedAt || null,
+    });
+  } catch (err) {
+    console.error("Error saving scratch flow:", err.message);
+    return res
+      .status(500)
+      .json({ message: "Server error while saving scratch status." });
+  }
+});
+
+// Initialize/read activation timer in DB (persists across refresh/close)
+router.post("/flow/activation-init", async (req, res) => {
+  const { mobile, durationMs } = req.body || {};
+  if (!mobile) {
+    return res.status(400).json({ message: "Mobile number is required." });
+  }
+  const duration = Number.isFinite(Number(durationMs)) && Number(durationMs) > 0
+    ? Number(durationMs)
+    : 60 * 1000;
+  try {
+    const user = await User.findOne({ mobile });
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    const now = Date.now();
+    const currentEnd = user.flow?.activationEndsAt
+      ? new Date(user.flow.activationEndsAt).getTime()
+      : NaN;
+    const hasValidFutureEnd = Number.isFinite(currentEnd) && currentEnd > now;
+    const isCompleted = Boolean(user.flow?.activationCompletedAt);
+
+    if (!hasValidFutureEnd && !isCompleted) {
+      user.flow = {
+        ...(user.flow || {}),
+        activationEndsAt: new Date(now + duration),
+      };
+      await user.save();
+    }
+
+    return res.json({
+      activationEndsAt: user.flow?.activationEndsAt || null,
+      activationCompletedAt: user.flow?.activationCompletedAt || null,
+    });
+  } catch (err) {
+    console.error("Error initializing activation flow:", err.message);
+    return res
+      .status(500)
+      .json({ message: "Server error while initializing activation timer." });
+  }
+});
+
+// Mark activation timer completed
+router.post("/flow/activation-complete", async (req, res) => {
+  const { mobile } = req.body || {};
+  if (!mobile) {
+    return res.status(400).json({ message: "Mobile number is required." });
+  }
+  try {
+    const user = await User.findOneAndUpdate(
+      { mobile },
+      {
+        $set: {
+          "flow.activationCompletedAt": new Date(),
+        },
+        $unset: {
+          "flow.activationEndsAt": 1,
+        },
+      },
+      { new: true }
+    ).lean();
+    if (!user) return res.status(404).json({ message: "User not found." });
+    return res.json({
+      message: "Activation completion saved.",
+      activationCompletedAt: user.flow?.activationCompletedAt || null,
+    });
+  } catch (err) {
+    console.error("Error saving activation completion:", err.message);
+    return res
+      .status(500)
+      .json({ message: "Server error while saving activation completion." });
+  }
+});
+
 // Get user details (and gift) by mobile
 router.get("/details", async (req, res) => {
   const { mobile } = req.query;
@@ -243,6 +344,11 @@ router.get("/details", async (req, res) => {
         invoiceCopy: user.documents?.invoiceCopy || "",
         scratchCard: user.documents?.scratchCard || "",
         uploadedAt: user.documents?.uploadedAt || null,
+      },
+      flow: {
+        scratchCompletedAt: user.flow?.scratchCompletedAt || null,
+        activationEndsAt: user.flow?.activationEndsAt || null,
+        activationCompletedAt: user.flow?.activationCompletedAt || null,
       },
     });
   } catch (err) {

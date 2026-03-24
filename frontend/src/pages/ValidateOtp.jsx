@@ -171,7 +171,24 @@ const ValidateOtp = () => {
 
       localStorage.setItem("c2r_session", "1");
       if (exists) {
-        navigate(`/scratch/${encodeURIComponent(mobileFromState)}`);
+        const statusRes = await fetch(
+          `${API_BASE}/api/users/details?mobile=${encodeURIComponent(mobileFromState)}`
+        );
+        const statusData = await statusRes.json().catch(() => ({}));
+        if (!statusRes.ok) {
+          throw new Error(statusData.message || "Unable to load registration status.");
+        }
+
+        const scratchDone = Boolean(statusData?.flow?.scratchCompletedAt);
+        const activationDone = Boolean(statusData?.flow?.activationCompletedAt);
+
+        if (activationDone) {
+          navigate(`/upload-documents/${encodeURIComponent(mobileFromState)}`);
+        } else if (scratchDone) {
+          navigate(`/activation/${encodeURIComponent(mobileFromState)}`);
+        } else {
+          navigate(`/scratch/${encodeURIComponent(mobileFromState)}`);
+        }
       } else {
         navigate("/promo-code", {
           state: { mobileNumber: mobileFromState },

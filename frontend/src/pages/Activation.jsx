@@ -85,24 +85,61 @@ const Activation = () => {
   useEffect(() => {
     if (!mobile) return;
 
-    const durationMs = 60 * 1000;
-    let targetTime = Date.now() + durationMs;
+    let intervalId;
+    let cancelled = false;
 
-    setTimeLeftMs(targetTime - Date.now());
+    const init = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/users/flow/activation-init`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mobile, durationMs: 60 * 1000 }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.message || "Unable to initialize activation timer.");
+        }
+        if (cancelled) return;
 
-    const id = window.setInterval(() => {
-      const distance = targetTime - Date.now();
-      if (distance <= 0) {
-        setTimeLeftMs(0);
-        window.clearInterval(id);
-        // After 1 minute, redirect to congratulations page.
-        navigate(`/congratulations/${encodeURIComponent(mobile)}`);
-        return;
+        if (data?.activationCompletedAt) {
+          navigate(`/upload-documents/${encodeURIComponent(mobile)}`);
+          return;
+        }
+
+        const targetTime = data?.activationEndsAt
+          ? new Date(data.activationEndsAt).getTime()
+          : Date.now();
+        setTimeLeftMs(Math.max(0, targetTime - Date.now()));
+
+        intervalId = window.setInterval(async () => {
+          const distance = targetTime - Date.now();
+          if (distance <= 0) {
+            setTimeLeftMs(0);
+            window.clearInterval(intervalId);
+            try {
+              await fetch(`${API_BASE}/api/users/flow/activation-complete`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ mobile }),
+              });
+            } catch {
+              // Even on network error, continue user flow.
+            }
+            navigate(`/upload-documents/${encodeURIComponent(mobile)}`);
+            return;
+          }
+          setTimeLeftMs(distance);
+        }, 1000);
+      } catch (err) {
+        setError(err?.message || "Unable to load activation timer.");
       }
-      setTimeLeftMs(distance);
-    }, 1000);
+    };
 
-    return () => clearInterval(id);
+    init();
+    return () => {
+      cancelled = true;
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [mobile, navigate]);
 
   return (

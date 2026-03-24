@@ -19,6 +19,11 @@ const userSchema = new mongoose.Schema({
     scratchCard: String,
     uploadedAt: Date,
   },
+  flow: {
+    scratchCompletedAt: Date,
+    activationEndsAt: Date,
+    activationCompletedAt: Date,
+  },
 });
 
 const User = mongoose.model("User", userSchema);

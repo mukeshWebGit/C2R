@@ -114,6 +114,15 @@ const Scratch = () => {
         setIsRevealed(true);
         setIsFading(true);
         setShouldGoActivation(true);
+        if (mobileFromState) {
+          fetch(`${API_BASE}/api/users/flow/scratch-complete`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mobile: mobileFromState }),
+          }).catch(() => {
+            // Non-blocking: keep UI flow even if network hiccups.
+          });
+        }
         // keep the scratched pixels; just fade out the layer
         window.setTimeout(() => {
           const c = canvasRef.current;
