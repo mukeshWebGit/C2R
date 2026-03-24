@@ -1288,6 +1288,25 @@ const PromoCodesPage = (props: { token: string }) => {
     image: "",
     used: false,
   });
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
+
+  const uploadPromoImage = async (file: File) => {
+    const fd = new FormData();
+    fd.append("image", file);
+    const res = await fetch(`${API_BASE}/api/admin/promocodes/upload-image`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${props.token}` },
+      body: fd,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (res.status === 404) {
+        throw new Error("Upload API not found on backend. Please restart/redeploy backend.");
+      }
+      throw new Error(data?.message || `Unable to upload image (status ${res.status})`);
+    }
+    return String(data?.image || "");
+  };
 
   const load = async () => {
     setLoading(true);
@@ -1332,13 +1351,15 @@ const PromoCodesPage = (props: { token: string }) => {
           body: JSON.stringify(form),
         });
       } else {
+        const uploadedImage = newImageFile ? await uploadPromoImage(newImageFile) : form.image;
         await apiFetch("/api/admin/promocodes", props.token, {
           method: "POST",
-          body: JSON.stringify({ code: form.code, gift: form.gift, image: form.image }),
+          body: JSON.stringify({ code: form.code, gift: form.gift, image: uploadedImage || "" }),
         });
       }
       await load();
       cancelEdit();
+      setNewImageFile(null);
     } catch (err: any) {
       setError(err?.message || "Unable to save promocode");
       setLoading(false);
@@ -1418,8 +1439,16 @@ const PromoCodesPage = (props: { token: string }) => {
             <input className="adminInput" value={form.gift} onChange={(e) => setForm((p) => ({ ...p, gift: e.target.value }))} />
           </label>
           <label className="adminLabel">
-            Image URL
-            <input className="adminInput" value={form.image} onChange={(e) => setForm((p) => ({ ...p, image: e.target.value }))} />
+            Upload Image
+            <input
+              className="adminInput"
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              onChange={(e) => setNewImageFile(e.target.files?.[0] || null)}
+            />
+            <div className="adminSubtle" style={{ marginTop: 6 }}>
+              {newImageFile ? newImageFile.name : "No image selected"}
+            </div>
           </label>
         </div>
         <div className="adminActionsRow">

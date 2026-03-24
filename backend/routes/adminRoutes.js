@@ -1,11 +1,42 @@
 import crypto from "crypto";
 import express from "express";
+import fs from "fs";
+import multer from "multer";
+import path from "path";
+import { fileURLToPath } from "url";
 import Admin from "../models/Admin.js";
 import AdminSession from "../models/AdminSession.js";
 import User from "../models/User.js";
 import PromoCode from "../models/PromoCode.js";
 
 const router = express.Router();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const promoUploadsDir = path.join(__dirname, "..", "uploads", "promocodes");
+if (!fs.existsSync(promoUploadsDir)) {
+  fs.mkdirSync(promoUploadsDir, { recursive: true });
+}
+
+const promoImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, promoUploadsDir),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname || "").toLowerCase();
+      const safeBase = path
+        .basename(file.originalname || "promo-image", ext)
+        .replace(/[^a-zA-Z0-9_-]/g, "-");
+      cb(null, `${Date.now()}-${safeBase}${ext}`);
+    },
+  }),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowed.includes(file.mimetype)) {
+      return cb(new Error("Only JPG, PNG, or WEBP images are allowed."));
+    }
+    cb(null, true);
+  },
+});
 
 const getJwtLikeTokenTtlMs = () => {
   const raw = process.env.ADMIN_SESSION_TTL_MS;
@@ -352,6 +383,20 @@ router.delete(
 );
 
 // PROMOCODES MANAGEMENT
+router.post(
+  "/promocodes/upload-image",
+  ensureAdminAuth,
+  requireRole(["MASTER", "ADMIN"]),
+  promoImageUpload.single("image"),
+  async (req, res) => {
+    if (!req.file) return res.status(400).json({ message: "Image file is required." });
+    return res.json({
+      message: "Image uploaded.",
+      image: `/uploads/promocodes/${req.file.filename}`,
+    });
+  }
+);
+
 router.get(
   "/promocodes",
   ensureAdminAuth,
@@ -424,6 +469,19 @@ router.delete(
     }
   }
 );
+
+router.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({ message: "Image must be up to 2MB." });
+    }
+    return res.status(400).json({ message: err.message || "Upload error." });
+  }
+  if (err?.message?.includes("Only JPG, PNG, or WEBP images")) {
+    return res.status(400).json({ message: err.message });
+  }
+  return next(err);
+});
 
 export default router;
 
