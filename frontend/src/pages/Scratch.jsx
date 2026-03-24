@@ -26,7 +26,7 @@ const Scratch = () => {
   const [loadError, setLoadError] = useState("");
   const [isRevealed, setIsRevealed] = useState(false);
   const [isFading, setIsFading] = useState(false);
-  const [shouldGoCongrats, setShouldGoCongrats] = useState(false);
+  const [shouldGoActivation, setShouldGoActivation] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("c2r_session");
@@ -36,12 +36,12 @@ const Scratch = () => {
   }, []);
 
   useEffect(() => {
-    if (!shouldGoCongrats || !mobileFromState) return;
+    if (!shouldGoActivation || !mobileFromState) return;
     const t = window.setTimeout(() => {
-      navigate(`/congratulations/${encodeURIComponent(mobileFromState)}`);
-    }, 10000);
+      navigate(`/activation/${encodeURIComponent(mobileFromState)}`);
+    }, 20000);
     return () => window.clearTimeout(t);
-  }, [shouldGoCongrats, mobileFromState, navigate]);
+  }, [shouldGoActivation, mobileFromState, navigate]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -113,7 +113,7 @@ const Scratch = () => {
       if (transparent / Math.max(1, total) >= 0.6) {
         setIsRevealed(true);
         setIsFading(true);
-        setShouldGoCongrats(true);
+        setShouldGoActivation(true);
         // keep the scratched pixels; just fade out the layer
         window.setTimeout(() => {
           const c = canvasRef.current;

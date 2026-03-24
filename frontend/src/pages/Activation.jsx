@@ -10,9 +10,8 @@ const Activation = () => {
   const [giftName, setGiftName] = useState("UCB Wrist Watch");
   const [giftImage, setGiftImage] = useState("");
   const [error, setError] = useState("");
-  const [timeLeftMs, setTimeLeftMs] = useState(
-    12 * 60 * 60 * 1000 + 11 * 60 * 1000 + 35 * 1000
-  );
+  // 1 minute countdown
+  const [timeLeftMs, setTimeLeftMs] = useState(60 * 1000);
 
   const hours = Math.max(
     0,
@@ -84,25 +83,27 @@ const Activation = () => {
   }, [mobile]);
 
   useEffect(() => {
-    let targetTime = Date.now() + timeLeftMs;
+    if (!mobile) return;
 
-    const tick = () => {
-      const now = Date.now();
-      const distance = targetTime - now;
+    const durationMs = 60 * 1000;
+    let targetTime = Date.now() + durationMs;
+
+    setTimeLeftMs(targetTime - Date.now());
+
+    const id = window.setInterval(() => {
+      const distance = targetTime - Date.now();
       if (distance <= 0) {
-        // reset to original countdown duration
-        targetTime = Date.now() + timeLeftMs;
-        setTimeLeftMs(timeLeftMs);
-      } else {
-        setTimeLeftMs(distance);
+        setTimeLeftMs(0);
+        window.clearInterval(id);
+        // After 1 minute, redirect to congratulations page.
+        navigate(`/congratulations/${encodeURIComponent(mobile)}`);
+        return;
       }
-    };
+      setTimeLeftMs(distance);
+    }, 1000);
 
-    tick();
-    const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mobile, navigate]);
 
   return (
     <main
@@ -207,7 +208,7 @@ const Activation = () => {
 
           <p className="text-base text-center mb-8 text-light">
             and before{" "}
-            <span style={{ color: "#168CA5", fontWeight: 600 }}>210 days.</span>
+            <span style={{ color: "#168CA5", fontWeight: 600 }}>1 minute.</span>
           </p>
 
           <div
