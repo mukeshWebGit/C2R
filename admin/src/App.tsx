@@ -77,16 +77,13 @@ const normalizeAssetUrl = (rawUrl: string) => {
 
   try {
     const parsed = new URL(value);
-    const isBackendFilePath =
+    const isBackendAsset =
       parsed.pathname.startsWith("/uploads") || parsed.pathname.startsWith("/images");
-
-    // Some records store frontend/localhost host for backend files.
     const likelyWrongHost =
       parsed.hostname === "c2r.onrender.com" ||
       parsed.hostname === "localhost" ||
       parsed.hostname === "127.0.0.1";
-
-    if (apiOrigin && isBackendFilePath && likelyWrongHost) {
+    if (apiOrigin && isBackendAsset && likelyWrongHost) {
       return `${apiOrigin}${parsed.pathname}${parsed.search}${parsed.hash}`;
     }
     return value;
@@ -98,23 +95,26 @@ const normalizeAssetUrl = (rawUrl: string) => {
 const parseRoute = (pathname: string): RouteKey => {
   const p = pathname.replace(/\/+$/, "");
   if (!p || p === "/") return "login";
-
   const segments = p.split("/").filter(Boolean);
   if (segments[0] === "users" && segments.length === 2) return "userDetails";
-
   const key = segments[0] as RouteKey;
-  if (key === "dashboard" || key === "users" || key === "admins" || key === "promocodes" || key === "login") {
+  if (
+    key === "dashboard" ||
+    key === "users" ||
+    key === "admins" ||
+    key === "promocodes" ||
+    key === "login"
+  ) {
     return key;
   }
   return "dashboard";
 };
 
-const getUserDetailsIdFromPath = (pathname: string): string => {
+const getUserDetailsIdFromPath = (pathname: string) => {
   const p = pathname.replace(/\/+$/, "");
   if (!p || p === "/") return "";
   const segments = p.split("/").filter(Boolean);
-  if (segments[0] === "users" && segments.length === 2) return segments[1] || "";
-  return "";
+  return segments[0] === "users" && segments.length === 2 ? segments[1] : "";
 };
 
 const navigateTo = (to: RouteKey) => {
@@ -158,7 +158,7 @@ const App = () => {
   const [route, setRoute] = useState<RouteKey>(() =>
     parseRoute(window.location.pathname)
   );
-  const [userDetailsId, setUserDetailsId] = useState<string>(() =>
+  const [userDetailsId, setUserDetailsId] = useState(() =>
     getUserDetailsIdFromPath(window.location.pathname)
   );
   const [token, setToken] = useState<string>(() =>
@@ -262,11 +262,7 @@ const App = () => {
           {route === "users" ? (
             <UsersPage token={token} onViewUser={navigateToUserDetails} />
           ) : route === "userDetails" ? (
-            <UserDetailsPage
-              token={token}
-              userId={userDetailsId}
-              onBack={() => navigateTo("users")}
-            />
+            <UserDetailsPage token={token} userId={userDetailsId} onBack={() => navigateTo("users")} />
           ) : route === "admins" ? (
             canAccessAdmins ? (
               <AdminsPage token={token} />
@@ -428,7 +424,7 @@ const LoginPage = (props: {
           <div className="loginTopSubtitle">Sign in to continue.</div>
         </div>
 
-        <div className="loginBody">
+        <div className="loginBody text-left">
           <form className="loginForm" onSubmit={submit}>
             <label className="loginLabel">
               Username
@@ -479,15 +475,6 @@ const LoginPage = (props: {
               </span>
             </button>
           </form>
-
-          <div className="loginRegister">
-            Don&apos;t have an account?{" "}
-            <a href="#" className="loginLink">
-              Free Register
-            </a>
-          </div>
-
-         
         </div>
       </div>
     </div>
@@ -527,7 +514,6 @@ const DashboardPage = (props: {
   const promosUsed = stats?.usedPromoCodes ?? 0;
   const promoUsedRate =
     promosTotal > 0 ? Math.round((promosUsed / promosTotal) * 1000) / 10 : 0;
-  const docsUploaded = activeUsers;
 
   return (
     <div className="dashLayout">
@@ -614,109 +600,19 @@ const DashboardPage = (props: {
             />
           </div>
 
-          <div className="dashRow">
-            <div className="dashCard dashCardWide">
-              <div className="dashCardHeader">
-                <div className="dashCardTitle">Audience Overview</div>
-                <div className="dashCardHeaderRight">This Year ▾</div>
-              </div>
-              <div className="dashChartWrap">
-                <AudienceChart />
-              </div>
-            </div>
-
-            <div className="dashCard">
-              <div className="dashCardHeader">
-                <div className="dashCardTitle">New Visitors</div>
-                <div className="dashCardHeaderRight">▼</div>
-              </div>
-              <div className="dashNewVisitorsValue">
-                {docsUploaded.toLocaleString()}
-              </div>
-              <div className="dashBarsWrap">
-                <VisitorsBars />
-              </div>
-              <button className="dashMoreBtn" type="button">
-                More Details →
-              </button>
-            </div>
-          </div>
-
-          <div className="dashRow dashRowBottom">
-            <div className="dashCard">
-              <div className="dashCardHeader">
-                <div className="dashCardTitle">
-                  Browser Used &amp; Traffic Reports
-                </div>
-              </div>
-              <div className="dashSmallTableWrap">
-                <table className="dashSmallTable">
-                  <thead>
-                    <tr>
-                      <th>Browser</th>
-                      <th>Sessions</th>
-                      <th>Bounce</th>
-                      <th>Transactions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Chrome</td>
-                      <td>{Math.round(totalUsers * 0.52)}</td>
-                      <td>52.80%</td>
-                      <td>{Math.round(totalUsers * 0.03)}</td>
-                    </tr>
-                    <tr>
-                      <td>Firefox</td>
-                      <td>{Math.round(totalUsers * 0.18)}</td>
-                      <td>45.60%</td>
-                      <td>{Math.round(totalUsers * 0.01)}</td>
-                    </tr>
-                    <tr>
-                      <td>Safari</td>
-                      <td>{Math.round(totalUsers * 0.21)}</td>
-                      <td>39.20%</td>
-                      <td>{Math.round(totalUsers * 0.02)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="dashCard">
-              <div className="dashCardHeader">
-                <div className="dashCardTitle">Total Visits</div>
-              </div>
-              <div className="dashVisitsList">
-                <div className="dashVisitRow">
-                  <div>
-                    <div className="dashVisitLabel">Channel</div>
-                    <div className="dashVisitValue">Organic search</div>
-                  </div>
-                  <div className="dashVisitMetric">10,853 (52.20%)</div>
-                </div>
-                <div className="dashVisitRow">
-                  <div>
-                    <div className="dashVisitLabel">Channel</div>
-                    <div className="dashVisitValue">Direct</div>
-                  </div>
-                  <div className="dashVisitMetric">1,082 (4.05%)</div>
-                </div>
-                <div className="dashVisitRow">
-                  <div>
-                    <div className="dashVisitLabel">Channel</div>
-                    <div className="dashVisitValue">Referral</div>
-                  </div>
-                  <div className="dashVisitMetric">980 (3.50%)</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div className="dashCard" style={{ marginTop: 16 }}>
             <div className="dashCardHeader">
-              <div className="dashCardTitle">All Users</div>
-              <div className="dashCardHeaderRight">{users.length} total</div>
+              <div className="dashCardTitle">Latest 10 Users</div>
+              <div className="dashCardHeaderRight">
+                <span style={{ marginRight: 8 }}>{users.length} total</span>
+                <button
+                  className="dashMoreBtn"
+                  type="button"
+                  onClick={() => props.onNavigate("users")}
+                >
+                  View All
+                </button>
+              </div>
             </div>
             <div className="dashSmallTableWrap dashMaxHeightUsers">
               <table className="dashSmallTable">
@@ -730,7 +626,7 @@ const DashboardPage = (props: {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((u) => {
+                  {users.slice(0, 10).map((u) => {
                     const docsUploadedRow = Boolean(u.documents?.uploadedAt);
                     return (
                       <tr key={u._id}>
@@ -802,102 +698,13 @@ const MetricCard = (props: {
   );
 };
 
-const AudienceChart = () => {
-  // Lightweight inline chart (visual only)
-  const path = "M0,85 C20,60 40,95 60,70 C80,45 100,65 120,52 C140,40 160,62 180,54 C200,44 220,50 240,40 C260,30 280,42 300,35 C320,28 340,38 360,24 C380,14 400,25 420,18 C440,10 460,20 480,8 L480,120 L0,120 Z";
-  return (
-    <svg
-      className="dashSvg"
-      viewBox="0 0 480 120"
-      preserveAspectRatio="none"
-    >
-      <defs>
-        <linearGradient id="dashGrad" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="#22c55e" stopOpacity="0.22" />
-          <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={path} fill="url(#dashGrad)" />
-      <path
-        d="M0,85 C20,60 40,95 60,70 C80,45 100,65 120,52 C140,40 160,62 180,54 C200,44 220,50 240,40 C260,30 280,42 300,35 C320,28 340,38 360,24 C380,14 400,25 420,18 C440,10 460,20 480,8"
-        fill="none"
-        stroke="#22c55e"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      {/* y-grid */}
-      <g opacity="0.25" stroke="#9ca3af">
-        <line x1="0" y1="20" x2="480" y2="20" />
-        <line x1="0" y1="50" x2="480" y2="50" />
-        <line x1="0" y1="80" x2="480" y2="80" />
-      </g>
-      {/* x labels */}
-      <g fontSize="10" fill="#9ca3af">
-        {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map(
-          (t, i) => (
-            <text key={t} x={i * 40 + 10} y={112}>
-              {t}
-            </text>
-          )
-        )}
-      </g>
-    </svg>
-  );
-};
-
-const VisitorsBars = () => {
-  const bars = [18, 25, 15, 28, 33, 22, 40];
-  return (
-    <div className="dashBars">
-      <div className="dashBarsGrid">
-        {bars.map((v, i) => (
-          <div key={i} className="dashBarWrap">
-            <div className="dashBar" style={{ height: `${v * 2}%` }} />
-          </div>
-        ))}
-      </div>
-      <div className="dashBarsLabels">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((t) => (
-          <span key={t}>{t}</span>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const UsersPage = (props: { token: string; onViewUser: (userId: string) => void }) => {
+const UsersPage = (props: { token: string; onViewUser: (id: string) => void }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [users, setUsers] = useState<UserDoc[]>([]);
 
   const [editingId, setEditingId] = useState<string>("");
-  const [viewingId, setViewingId] = useState<string>("");
   const [form, setForm] = useState<Partial<UserDoc>>({});
-  const [docModal, setDocModal] = useState<null | { url: string; title: string; isImage: boolean }>(null);
-
-  const isImageUrl = (url: string) =>
-    /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url);
-
-  const openDocModal = (url: string, title: string) => {
-    const normalizedUrl = normalizeAssetUrl(url);
-    if (!normalizedUrl) return;
-    setDocModal({
-      url: normalizedUrl,
-      title,
-      isImage: isImageUrl(normalizedUrl),
-    });
-  };
-
-  const closeDocModal = () => setDocModal(null);
-
-  useEffect(() => {
-    if (!docModal) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeDocModal();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [docModal]);
 
   useEffect(() => {
     setLoading(true);
@@ -910,25 +717,12 @@ const UsersPage = (props: { token: string; onViewUser: (userId: string) => void 
 
   const startEdit = (u: UserDoc) => {
     setEditingId(u._id);
-    setViewingId("");
     setForm({ ...u });
-  };
-
-  const startView = (u: UserDoc) => {
-    // Route to dedicated details page
-    setViewingId("");
-    setEditingId("");
-    setForm({});
-    props.onViewUser(u._id);
   };
 
   const cancelEdit = () => {
     setEditingId("");
     setForm({});
-  };
-
-  const closeView = () => {
-    setViewingId("");
   };
 
   const save = async () => {
@@ -978,8 +772,6 @@ const UsersPage = (props: { token: string; onViewUser: (userId: string) => void 
         props.token
       );
       setUsers(data.users || []);
-      setViewingId("");
-      cancelEdit();
     } catch (err: any) {
       setError(err?.message || "Unable to delete user");
     } finally {
@@ -987,309 +779,250 @@ const UsersPage = (props: { token: string; onViewUser: (userId: string) => void 
     }
   };
 
-  const viewingUser = viewingId ? users.find((u) => u._id === viewingId) : null;
-
   return (
     <div className="adminLayout">
-      {viewingUser ? (
-        <div className="adminCard">
-          <div className="adminCardHeader">
-            <h2>User Details</h2>
-          </div>
+      <div className="adminCard">
+        <div className="adminCardHeader">
+          <h2>Users</h2>
+        </div>
+        {loading ? <p>Loading...</p> : null}
+        {error ? <div className="adminErrorBlock">{error}</div> : null}
+        <div className="adminTableWrap">
+          <table className="adminTable">
+            <thead>
+              <tr>
+                <th>Mobile</th>
+                <th>Name</th>
+                <th>Promo</th>
+                <th>Gift</th>
+                <th>Docs</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => {
+                const docsUploaded = Boolean(u.documents?.uploadedAt);
+                return (
+                  <tr key={u._id}>
+                    <td>{u.mobile}</td>
+                    <td>{u.name || "-"}</td>
+                    <td>{u.promoCode || "-"}</td>
+                    <td>{u.giftName || "-"}</td>
+                    <td>{docsUploaded ? "Yes" : "No"}</td>
+                    <td>
+                      <button
+                        className="adminLinkBtn"
+                        type="button"
+                        onClick={() => props.onViewUser(u._id)}
+                      >
+                        View
+                      </button>
+                      <button
+                        className="adminLinkBtn"
+                        type="button"
+                        onClick={() => startEdit(u)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="adminLinkBtn adminDanger"
+                        type="button"
+                        onClick={() => del(u._id)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {users.length === 0 && !loading ? (
+                <tr>
+                  <td colSpan={6} className="adminEmptyCell">
+                    No users found.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-          <div className="adminActionsRow" style={{ marginTop: -8, marginBottom: 10 }}>
-            <button className="adminSecondaryBtn" type="button" onClick={closeView} disabled={loading}>
-              Back
-            </button>
-          </div>
-
-          <div className="adminFormGrid">
-            <div className="adminLabel">Mobile</div>
-            <div>{viewingUser.mobile || "-"}</div>
-
-            <div className="adminLabel">Name</div>
-            <div>{viewingUser.name || "-"}</div>
-
-            <div className="adminLabel">Email</div>
-            <div>{viewingUser.email || "-"}</div>
-
-            <div className="adminLabel">Address</div>
-            <div>{viewingUser.address || "-"}</div>
-
-            <div className="adminLabel">City</div>
-            <div>{viewingUser.city || "-"}</div>
-
-            <div className="adminLabel">State</div>
-            <div>{viewingUser.state || "-"}</div>
-
-            <div className="adminLabel">Pincode</div>
-            <div>{viewingUser.pincode || "-"}</div>
-
-            <div className="adminLabel">Promo Code</div>
-            <div>{viewingUser.promoCode || "-"}</div>
-
-            <div className="adminLabel">Gift Name</div>
-            <div>{viewingUser.giftName || "-"}</div>
-
-            <div className="adminLabel">Gift Image</div>
-            <div>
-              {viewingUser.giftImage ? (
-                <button
-                  className="adminLinkBtn"
-                  type="button"
-                  onClick={() => openDocModal(viewingUser.giftImage || "", "Gift image")}
-                >
-                  View image
-                </button>
-              ) : (
-                "-"
-              )}
+      {editingId ? (
+        <div
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) cancelEdit();
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.45)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div className="adminCard" style={{ width: "min(860px, 100%)", maxHeight: "90vh", overflow: "auto" }}>
+            <h2>Edit User</h2>
+            <div className="adminFormGrid">
+              <label className="adminLabel">
+                Name
+                <input className="adminInput" value={form.name || ""} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+              </label>
+              <label className="adminLabel">
+                Email
+                <input className="adminInput" value={form.email || ""} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} />
+              </label>
+              <label className="adminLabel">
+                Address
+                <input className="adminInput" value={form.address || ""} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} />
+              </label>
+              <label className="adminLabel">
+                City
+                <input className="adminInput" value={form.city || ""} onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))} />
+              </label>
+              <label className="adminLabel">
+                State
+                <input className="adminInput" value={form.state || ""} onChange={(e) => setForm((p) => ({ ...p, state: e.target.value }))} />
+              </label>
+              <label className="adminLabel">
+                Pincode
+                <input className="adminInput" value={form.pincode || ""} onChange={(e) => setForm((p) => ({ ...p, pincode: e.target.value }))} />
+              </label>
+              <label className="adminLabel">
+                Promo Code
+                <input className="adminInput" value={form.promoCode || ""} onChange={(e) => setForm((p) => ({ ...p, promoCode: e.target.value }))} />
+              </label>
+              <label className="adminLabel">
+                Gift Name
+                <input className="adminInput" value={form.giftName || ""} onChange={(e) => setForm((p) => ({ ...p, giftName: e.target.value }))} />
+              </label>
+              <label className="adminLabel">
+                Gift Image
+                <input className="adminInput" value={form.giftImage || ""} onChange={(e) => setForm((p) => ({ ...p, giftImage: e.target.value }))} />
+              </label>
             </div>
-
-            <div className="adminLabel">Documents Uploaded</div>
-            <div>{viewingUser.documents?.uploadedAt ? "Yes" : "No"}</div>
-
-            <div className="adminLabel">ID Proof</div>
-            <div>
-              {viewingUser.documents?.idProof ? (
-                <button
-                  className="adminLinkBtn"
-                  type="button"
-                  onClick={() =>
-                    openDocModal(viewingUser.documents?.idProof || "", "ID proof")
-                  }
-                >
-                  View
-                </button>
-              ) : (
-                "-"
-              )}
-            </div>
-
-            <div className="adminLabel">Invoice Copy</div>
-            <div>
-              {viewingUser.documents?.invoiceCopy ? (
-                <button
-                  className="adminLinkBtn"
-                  type="button"
-                  onClick={() =>
-                    openDocModal(
-                      viewingUser.documents?.invoiceCopy || "",
-                      "Invoice copy"
-                    )
-                  }
-                >
-                  View
-                </button>
-              ) : (
-                "-"
-              )}
-            </div>
-
-            <div className="adminLabel">Scratch Card</div>
-            <div>
-              {viewingUser.documents?.scratchCard ? (
-                <button
-                  className="adminLinkBtn"
-                  type="button"
-                  onClick={() =>
-                    openDocModal(
-                      viewingUser.documents?.scratchCard || "",
-                      "Scratch card"
-                    )
-                  }
-                >
-                  View
-                </button>
-              ) : (
-                "-"
-              )}
+            <div className="adminActionsRow">
+              <button className="adminPrimaryBtn" type="button" onClick={save} disabled={loading}>
+                Save
+              </button>
+              <button className="adminSecondaryBtn" type="button" onClick={cancelEdit} disabled={loading}>
+                Cancel
+              </button>
             </div>
           </div>
         </div>
-      ) : (
-        <>
-          <div className="adminCard">
-            <div className="adminCardHeader">
-              <h2>Users</h2>
+      ) : null}
+    </div>
+  );
+};
+
+const UserDetailsPage = (props: { token: string; userId: string; onBack: () => void }) => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [user, setUser] = useState<UserDoc | null>(null);
+  const [docModal, setDocModal] = useState<null | { url: string; title: string; isImage: boolean }>(null);
+
+  const isImageUrl = (url: string) => /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url);
+
+  const openDocModal = (url: string, title: string) => {
+    const normalizedUrl = normalizeAssetUrl(url);
+    if (!normalizedUrl) return;
+    setDocModal({
+      url: normalizedUrl,
+      title,
+      isImage: isImageUrl(normalizedUrl),
+    });
+  };
+
+  const closeDocModal = () => setDocModal(null);
+
+  useEffect(() => {
+    if (!props.userId) return;
+    setLoading(true);
+    setError("");
+    apiFetch<{ user: UserDoc }>(`/api/admin/users/${props.userId}`, props.token)
+      .then((data) => setUser(data.user))
+      .catch((err) => setError(err?.message || "Unable to load user details"))
+      .finally(() => setLoading(false));
+  }, [props.token, props.userId]);
+
+  return (
+    <div className="adminLayout">
+      <div className="adminCard">
+        <h2>User Details</h2>
+        {loading ? <p>Loading...</p> : null}
+        {error ? <div className="adminErrorBlock">{error}</div> : null}
+        {user ? (
+          <div className="adminFormGrid">
+            <div className="adminLabel">Mobile</div><div>{user.mobile || "-"}</div>
+            <div className="adminLabel">Name</div><div>{user.name || "-"}</div>
+            <div className="adminLabel">Email</div><div>{user.email || "-"}</div>
+            <div className="adminLabel">Address</div><div>{user.address || "-"}</div>
+            <div className="adminLabel">City</div><div>{user.city || "-"}</div>
+            <div className="adminLabel">State</div><div>{user.state || "-"}</div>
+            <div className="adminLabel">Pincode</div><div>{user.pincode || "-"}</div>
+            <div className="adminLabel">Promo Code</div><div>{user.promoCode || "-"}</div>
+            <div className="adminLabel">Gift Name</div><div>{user.giftName || "-"}</div>
+            <div className="adminLabel">Gift Image</div>
+            <div>
+              {user.giftImage ? (
+                <button
+                  className="adminLinkBtn"
+                  type="button"
+                  onClick={() => openDocModal(user.giftImage || "", "Gift image")}
+                >
+                  View image
+                </button>
+              ) : "-"}
             </div>
-            {loading ? <p>Loading...</p> : null}
-            {error ? <div className="adminErrorBlock">{error}</div> : null}
-            <div className="adminTableWrap">
-              <table className="adminTable">
-                <thead>
-                  <tr>
-                    <th>Mobile</th>
-                    <th>Name</th>
-                    <th>Promo</th>
-                    <th>Gift</th>
-                    <th>Docs</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => {
-                    const docsUploaded = Boolean(u.documents?.uploadedAt);
-                    return (
-                      <tr key={u._id}>
-                        <td>{u.mobile}</td>
-                        <td>{u.name || "-"}</td>
-                        <td>{u.promoCode || "-"}</td>
-                        <td>{u.giftName || "-"}</td>
-                        <td>{docsUploaded ? "Yes" : "No"}</td>
-                        <td>
-                          <button
-                            className="adminLinkBtn"
-                            type="button"
-                            onClick={() => startView(u)}
-                            title="View user"
-                            aria-label={`View user ${u.mobile}`}
-                          >
-                            <span
-                              aria-hidden="true"
-                              style={{
-                                marginRight: 6,
-                                display: "inline-flex",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              <svg
-                                width="14"
-                                height="14"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M2 12C4.5 7 8.5 4 12 4C15.5 4 19.5 7 22 12C19.5 17 15.5 20 12 20C8.5 20 4.5 17 2 12Z"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinejoin="round"
-                                />
-                                <path
-                                  d="M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                />
-                              </svg>
-                            </span>
-                            View
-                          </button>
-                          <button className="adminLinkBtn" type="button" onClick={() => startEdit(u)}>
-                            Edit
-                          </button>
-                          <button
-                            className="adminLinkBtn adminDanger"
-                            type="button"
-                            onClick={() => del(u._id)}
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {users.length === 0 && !loading ? (
-                    <tr>
-                      <td colSpan={6} className="adminEmptyCell">
-                        No users found.
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
+            <div className="adminLabel">Documents Uploaded</div>
+            <div>{user.documents?.uploadedAt ? "Yes" : "No"}</div>
+            <div className="adminLabel">ID Proof</div>
+            <div>
+              {user.documents?.idProof ? (
+                <button
+                  className="adminLinkBtn"
+                  type="button"
+                  onClick={() => openDocModal(user.documents?.idProof || "", "ID proof")}
+                >
+                  View
+                </button>
+              ) : "-"}
+            </div>
+            <div className="adminLabel">Invoice Copy</div>
+            <div>
+              {user.documents?.invoiceCopy ? (
+                <button
+                  className="adminLinkBtn"
+                  type="button"
+                  onClick={() => openDocModal(user.documents?.invoiceCopy || "", "Invoice copy")}
+                >
+                  View
+                </button>
+              ) : "-"}
+            </div>
+            <div className="adminLabel">Scratch Card</div>
+            <div>
+              {user.documents?.scratchCard ? (
+                <button
+                  className="adminLinkBtn"
+                  type="button"
+                  onClick={() => openDocModal(user.documents?.scratchCard || "", "Scratch card")}
+                >
+                  View
+                </button>
+              ) : "-"}
             </div>
           </div>
-
-          {!viewingId && editingId ? (
-            <div className="adminCard">
-              <h2>Edit User</h2>
-              <div className="adminFormGrid">
-                <label className="adminLabel">
-                  Name
-                  <input
-                    className="adminInput"
-                    value={form.name || ""}
-                    onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                  />
-                </label>
-                <label className="adminLabel">
-                  Email
-                  <input
-                    className="adminInput"
-                    value={form.email || ""}
-                    onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                  />
-                </label>
-                <label className="adminLabel">
-                  Address
-                  <input
-                    className="adminInput"
-                    value={form.address || ""}
-                    onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
-                  />
-                </label>
-                <label className="adminLabel">
-                  City
-                  <input
-                    className="adminInput"
-                    value={form.city || ""}
-                    onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
-                  />
-                </label>
-                <label className="adminLabel">
-                  State
-                  <input
-                    className="adminInput"
-                    value={form.state || ""}
-                    onChange={(e) => setForm((p) => ({ ...p, state: e.target.value }))}
-                  />
-                </label>
-                <label className="adminLabel">
-                  Pincode
-                  <input
-                    className="adminInput"
-                    value={form.pincode || ""}
-                    onChange={(e) => setForm((p) => ({ ...p, pincode: e.target.value }))}
-                  />
-                </label>
-                <label className="adminLabel">
-                  Promo Code
-                  <input
-                    className="adminInput"
-                    value={form.promoCode || ""}
-                    onChange={(e) => setForm((p) => ({ ...p, promoCode: e.target.value }))}
-                  />
-                </label>
-                <label className="adminLabel">
-                  Gift Name
-                  <input
-                    className="adminInput"
-                    value={form.giftName || ""}
-                    onChange={(e) => setForm((p) => ({ ...p, giftName: e.target.value }))}
-                  />
-                </label>
-                <label className="adminLabel">
-                  Gift Image
-                  <input
-                    className="adminInput"
-                    value={form.giftImage || ""}
-                    onChange={(e) => setForm((p) => ({ ...p, giftImage: e.target.value }))}
-                  />
-                </label>
-              </div>
-              <div className="adminActionsRow">
-                <button className="adminPrimaryBtn" type="button" onClick={save} disabled={loading}>
-                  Save
-                </button>
-                <button className="adminSecondaryBtn" type="button" onClick={cancelEdit} disabled={loading}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </>
-      )}
+        ) : null}
+        <div className="adminActionsRow">
+          <button className="adminSecondaryBtn" type="button" onClick={props.onBack}>
+            Back
+          </button>
+        </div>
+      </div>
       {docModal ? (
         <div
           onMouseDown={(e) => {
@@ -1346,265 +1079,6 @@ const UsersPage = (props: { token: string; onViewUser: (userId: string) => void 
                 src={docModal.url}
                 alt={docModal.title}
                 style={{ maxWidth: "100%", maxHeight: "80vh", display: "block", margin: "0 auto" }}
-              />
-            ) : (
-              <iframe
-                src={docModal.url}
-                title={docModal.title}
-                style={{ width: "100%", height: "80vh", border: "none" }}
-              />
-            )}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-};
-
-const UserDetailsPage = (props: {
-  token: string;
-  userId: string;
-  onBack: () => void;
-}) => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [user, setUser] = useState<UserDoc | null>(null);
-  const [docModal, setDocModal] = useState<null | {
-    url: string;
-    title: string;
-    isImage: boolean;
-  }>(null);
-
-  const isImageUrl = (url: string) =>
-    /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url);
-
-  const openDocModal = (url: string, title: string) => {
-    const normalizedUrl = normalizeAssetUrl(url);
-    if (!normalizedUrl) return;
-    setDocModal({
-      url: normalizedUrl,
-      title,
-      isImage: isImageUrl(normalizedUrl),
-    });
-  };
-
-  const closeDocModal = () => setDocModal(null);
-
-  useEffect(() => {
-    if (!props.userId) {
-      setLoading(false);
-      setError("Missing user id.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    apiFetch<{ user: UserDoc }>(`/api/admin/users/${props.userId}`, props.token)
-      .then((data) => setUser(data.user))
-      .catch((err) => setError(err?.message || "Unable to load user"))
-      .finally(() => setLoading(false));
-  }, [props.token, props.userId]);
-
-  useEffect(() => {
-    if (!docModal) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeDocModal();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [docModal]);
-
-  return (
-    <div className="adminLayout">
-      <div className="adminCard">
-        <div className="adminCardHeader">
-          <h2>User Details</h2>
-        </div>
-
-        {loading ? <p>Loading...</p> : null}
-        {error ? <div className="adminErrorBlock">{error}</div> : null}
-
-        {user ? (
-          <>
-            <div className="adminFormGrid">
-              <div className="adminLabel">Mobile</div>
-              <div>{user.mobile || "-"}</div>
-
-              <div className="adminLabel">Name</div>
-              <div>{user.name || "-"}</div>
-
-              <div className="adminLabel">Email</div>
-              <div>{user.email || "-"}</div>
-
-              <div className="adminLabel">Address</div>
-              <div>{user.address || "-"}</div>
-
-              <div className="adminLabel">City</div>
-              <div>{user.city || "-"}</div>
-
-              <div className="adminLabel">State</div>
-              <div>{user.state || "-"}</div>
-
-              <div className="adminLabel">Pincode</div>
-              <div>{user.pincode || "-"}</div>
-
-              <div className="adminLabel">Promo Code</div>
-              <div>{user.promoCode || "-"}</div>
-
-              <div className="adminLabel">Gift Name</div>
-              <div>{user.giftName || "-"}</div>
-
-              <div className="adminLabel">Gift Image</div>
-              <div>
-                {user.giftImage ? (
-                  <button
-                    className="adminLinkBtn"
-                    type="button"
-                    onClick={() => openDocModal(user.giftImage || "", "Gift image")}
-                  >
-                    View image
-                  </button>
-                ) : (
-                  "-"
-                )}
-              </div>
-
-              <div className="adminLabel">Documents Uploaded</div>
-              <div>{user.documents?.uploadedAt ? "Yes" : "No"}</div>
-
-              <div className="adminLabel">ID Proof</div>
-              <div>
-                {user.documents?.idProof ? (
-                  <button
-                    className="adminLinkBtn"
-                    type="button"
-                    onClick={() =>
-                      openDocModal(user.documents?.idProof || "", "ID proof")
-                    }
-                  >
-                    View
-                  </button>
-                ) : (
-                  "-"
-                )}
-              </div>
-
-              <div className="adminLabel">Invoice Copy</div>
-              <div>
-                {user.documents?.invoiceCopy ? (
-                  <button
-                    className="adminLinkBtn"
-                    type="button"
-                    onClick={() =>
-                      openDocModal(
-                        user.documents?.invoiceCopy || "",
-                        "Invoice copy"
-                      )
-                    }
-                  >
-                    View
-                  </button>
-                ) : (
-                  "-"
-                )}
-              </div>
-
-              <div className="adminLabel">Scratch Card</div>
-              <div>
-                {user.documents?.scratchCard ? (
-                  <button
-                    className="adminLinkBtn"
-                    type="button"
-                    onClick={() =>
-                      openDocModal(
-                        user.documents?.scratchCard || "",
-                        "Scratch card"
-                      )
-                    }
-                  >
-                    View
-                  </button>
-                ) : (
-                  "-"
-                )}
-              </div>
-            </div>
-
-            <div className="adminActionsRow">
-              <button
-                className="adminSecondaryBtn"
-                type="button"
-                onClick={props.onBack}
-                disabled={loading}
-              >
-                Back
-              </button>
-            </div>
-          </>
-        ) : null}
-      </div>
-
-      {docModal ? (
-        <div
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) closeDocModal();
-          }}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.55)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-          }}
-        >
-          <div
-            style={{
-              background: "#fff",
-              borderRadius: 10,
-              width: "min(980px, 100%)",
-              maxHeight: "90vh",
-              overflow: "auto",
-              padding: 16,
-              boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 12,
-              }}
-            >
-              <div style={{ fontWeight: 700 }}>{docModal.title}</div>
-              <button
-                type="button"
-                onClick={closeDocModal}
-                style={{
-                  background: "transparent",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: 8,
-                  padding: "6px 10px",
-                  cursor: "pointer",
-                }}
-              >
-                Close
-              </button>
-            </div>
-
-            {docModal.isImage ? (
-              <img
-                src={docModal.url}
-                alt={docModal.title}
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: "80vh",
-                  display: "block",
-                  margin: "0 auto",
-                }}
               />
             ) : (
               <iframe
@@ -1933,7 +1407,7 @@ const PromoCodesPage = (props: { token: string }) => {
       </div>
 
       <div className="adminCard">
-        <h2>{editingId ? "Edit Promo" : "Add Promo"}</h2>
+        <h2>Add Promo</h2>
         <div className="adminFormGrid">
           <label className="adminLabel">
             Code
@@ -1947,32 +1421,70 @@ const PromoCodesPage = (props: { token: string }) => {
             Image URL
             <input className="adminInput" value={form.image} onChange={(e) => setForm((p) => ({ ...p, image: e.target.value }))} />
           </label>
-          <label className="adminLabel">
-            Used
-            <select
-              className="adminInput"
-              value={String(form.used)}
-              onChange={(e) => setForm((p) => ({ ...p, used: e.target.value === "true" }))}
-            >
-              <option value="false">false</option>
-              <option value="true">true</option>
-            </select>
-          </label>
         </div>
         <div className="adminActionsRow">
           <button className="adminPrimaryBtn" type="button" onClick={submitAddOrUpdate} disabled={loading}>
-            {editingId ? "Update" : "Create"}
+            Create
           </button>
-          {editingId ? (
-            <button className="adminSecondaryBtn" type="button" onClick={cancelEdit} disabled={loading}>
-              Cancel
-            </button>
-          ) : null}
         </div>
         <p className="adminSubtle" style={{ marginTop: 8 }}>
           Image can be an absolute URL or a stored path (backend serves `/uploads` and `/images`).
         </p>
       </div>
+      {editingId ? (
+        <div
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) cancelEdit();
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.45)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div className="adminCard" style={{ width: "min(720px, 100%)", maxHeight: "90vh", overflow: "auto" }}>
+            <h2>Edit Promo</h2>
+            <div className="adminFormGrid">
+              <label className="adminLabel">
+                Code
+                <input className="adminInput" value={form.code} onChange={(e) => setForm((p) => ({ ...p, code: e.target.value }))} />
+              </label>
+              <label className="adminLabel">
+                Gift
+                <input className="adminInput" value={form.gift} onChange={(e) => setForm((p) => ({ ...p, gift: e.target.value }))} />
+              </label>
+              <label className="adminLabel">
+                Image URL
+                <input className="adminInput" value={form.image} onChange={(e) => setForm((p) => ({ ...p, image: e.target.value }))} />
+              </label>
+              <label className="adminLabel">
+                Used
+                <select
+                  className="adminInput"
+                  value={String(form.used)}
+                  onChange={(e) => setForm((p) => ({ ...p, used: e.target.value === "true" }))}
+                >
+                  <option value="false">false</option>
+                  <option value="true">true</option>
+                </select>
+              </label>
+            </div>
+            <div className="adminActionsRow">
+              <button className="adminPrimaryBtn" type="button" onClick={submitAddOrUpdate} disabled={loading}>
+                Update
+              </button>
+              <button className="adminSecondaryBtn" type="button" onClick={cancelEdit} disabled={loading}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };
