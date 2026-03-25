@@ -703,6 +703,8 @@ const UsersPage = (props: { token: string; onViewUser: (id: string) => void }) =
 
   const [editingId, setEditingId] = useState<string>("");
   const [form, setForm] = useState<Partial<UserDoc>>({});
+  const [newGiftImageFile, setNewGiftImageFile] = useState<File | null>(null);
+  const [giftImageInputKey, setGiftImageInputKey] = useState(0);
 
   useEffect(() => {
     setLoading(true);
@@ -721,6 +723,26 @@ const UsersPage = (props: { token: string; onViewUser: (id: string) => void }) =
   const cancelEdit = () => {
     setEditingId("");
     setForm({});
+    setNewGiftImageFile(null);
+    setGiftImageInputKey((k) => k + 1);
+  };
+
+  const uploadUserGiftImage = async (file: File) => {
+    const fd = new FormData();
+    fd.append("image", file);
+    const res = await fetch(`${API_BASE}/api/admin/users/upload-gift-image`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${props.token}` },
+      body: fd,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (res.status === 404) {
+        throw new Error("Gift image upload API not found on backend. Please restart/redeploy backend.");
+      }
+      throw new Error(data?.message || `Unable to upload image (status ${res.status})`);
+    }
+    return String(data?.image || "");
   };
 
   const save = async () => {
@@ -728,6 +750,9 @@ const UsersPage = (props: { token: string; onViewUser: (id: string) => void }) =
     setLoading(true);
     setError("");
     try {
+      const uploadedGiftImage = newGiftImageFile
+        ? await uploadUserGiftImage(newGiftImageFile)
+        : (form.giftImage ?? "");
       const body = {
         name: form.name ?? "",
         email: form.email ?? "",
@@ -737,7 +762,7 @@ const UsersPage = (props: { token: string; onViewUser: (id: string) => void }) =
         pincode: form.pincode ?? "",
         promoCode: form.promoCode ?? "",
         giftName: form.giftName ?? "",
-        giftImage: form.giftImage ?? "",
+        giftImage: uploadedGiftImage,
         documents: form.documents ?? undefined,
       };
       await apiFetch(`/api/admin/users/${editingId}`, props.token, {
@@ -898,7 +923,37 @@ const UsersPage = (props: { token: string; onViewUser: (id: string) => void }) =
               </label>
               <label className="adminLabel">
                 Gift Image
-                <input className="adminInput" value={form.giftImage || ""} onChange={(e) => setForm((p) => ({ ...p, giftImage: e.target.value }))} />
+                {form.giftImage ? (
+                  <div style={{ marginTop: 6 }}>
+                    <img
+                      src={normalizeAssetUrl(form.giftImage) || ""}
+                      alt="Current gift"
+                      style={{
+                        maxWidth: 60,
+                        maxHeight: 60,
+                        width: "auto",
+                        objectFit: "contain",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: 8,
+                        background: "#fff",
+                      }}
+                      onError={(e) => {
+                        // Hide broken preview (URL might be empty or unreachable)
+                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  </div>
+                ) : null}
+                <input
+                  className="adminInput"
+                  key={giftImageInputKey}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  onChange={(e) => setNewGiftImageFile(e.target.files?.[0] || null)}
+                />
+                <div className="adminSubtle" style={{ marginTop: 6 }}>
+                  {newGiftImageFile ? newGiftImageFile.name : form.giftImage ? "Current image shown above" : "No image selected"}
+                </div>
               </label>
             </div>
             <div className="adminActionsRow">

@@ -17,6 +17,11 @@ if (!fs.existsSync(promoUploadsDir)) {
   fs.mkdirSync(promoUploadsDir, { recursive: true });
 }
 
+const userGiftUploadsDir = path.join(__dirname, "..", "uploads", "gifts");
+if (!fs.existsSync(userGiftUploadsDir)) {
+  fs.mkdirSync(userGiftUploadsDir, { recursive: true });
+}
+
 const promoImageUpload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, promoUploadsDir),
@@ -24,6 +29,27 @@ const promoImageUpload = multer({
       const ext = path.extname(file.originalname || "").toLowerCase();
       const safeBase = path
         .basename(file.originalname || "promo-image", ext)
+        .replace(/[^a-zA-Z0-9_-]/g, "-");
+      cb(null, `${Date.now()}-${safeBase}${ext}`);
+    },
+  }),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowed.includes(file.mimetype)) {
+      return cb(new Error("Only JPG, PNG, or WEBP images are allowed."));
+    }
+    cb(null, true);
+  },
+});
+
+const userGiftImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, userGiftUploadsDir),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname || "").toLowerCase();
+      const safeBase = path
+        .basename(file.originalname || "gift-image", ext)
         .replace(/[^a-zA-Z0-9_-]/g, "-");
       cb(null, `${Date.now()}-${safeBase}${ext}`);
     },
@@ -189,6 +215,22 @@ router.get(
       .sort({ createdAt: -1 })
       .lean();
     return res.json({ users });
+  }
+);
+
+// POST /api/admin/users/upload-gift-image
+// NOTE: must be declared before "/users/:id" routes to avoid being treated as :id.
+router.post(
+  "/users/upload-gift-image",
+  ensureAdminAuth,
+  requireRole(["MASTER", "ADMIN"]),
+  userGiftImageUpload.single("image"),
+  async (req, res) => {
+    if (!req.file) return res.status(400).json({ message: "Image file is required." });
+    return res.json({
+      message: "Gift image uploaded.",
+      image: `/uploads/gifts/${req.file.filename}`,
+    });
   }
 );
 
