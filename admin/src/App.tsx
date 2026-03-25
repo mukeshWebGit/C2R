@@ -1437,6 +1437,8 @@ const PromoCodesPage = (props: { token: string }) => {
   });
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [addImageInputKey, setAddImageInputKey] = useState(0);
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImageInputKey, setEditImageInputKey] = useState(0);
 
   const uploadPromoImage = async (file: File) => {
     const fd = new FormData();
@@ -1481,6 +1483,8 @@ const PromoCodesPage = (props: { token: string }) => {
       image: p.image || "",
       used: Boolean(p.used),
     });
+    setEditImageFile(null);
+    setEditImageInputKey((k) => k + 1);
   };
 
   const cancelEdit = () => {
@@ -1490,6 +1494,8 @@ const PromoCodesPage = (props: { token: string }) => {
     setSuccessMessage("");
     setAddImageInputKey((k) => k + 1);
     setNewImageFile(null);
+    setEditImageFile(null);
+    setEditImageInputKey((k) => k + 1);
   };
 
   const normalizePromoCode = (value: string) =>
@@ -1532,12 +1538,14 @@ const PromoCodesPage = (props: { token: string }) => {
     setSuccessMessage("");
     try {
       if (editingId) {
+        const uploadedImage = editImageFile ? await uploadPromoImage(editImageFile) : form.image;
         await apiFetch(`/api/admin/promocodes/${editingId}`, props.token, {
           method: "PUT",
           body: JSON.stringify({
             ...form,
             code: normalizePromoCode(form.code),
             gift: String(form.gift || "").trim(),
+            image: uploadedImage || "",
           }),
         });
       } else {
@@ -1735,8 +1743,38 @@ const PromoCodesPage = (props: { token: string }) => {
                 <input className="adminInput" value={form.gift} onChange={(e) => setForm((p) => ({ ...p, gift: e.target.value }))} />
               </label>
               <label className="adminLabel">
-                Image URL
-                <input className="adminInput" value={form.image} onChange={(e) => setForm((p) => ({ ...p, image: e.target.value }))} />
+                Upload Image
+                {form.image ? (
+                  <div style={{ marginTop: 6 }}>
+                    <img
+                      src={normalizeAssetUrl(form.image) || ""}
+                      alt="Current promo"
+                      style={{
+                        maxWidth: 60,
+                        maxHeight: 60,
+                        width: "auto",
+                        objectFit: "contain",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: 8,
+                        background: "#fff",
+                      }}
+                      onError={(e) => {
+                        // Hide broken preview (URL might be empty or unreachable)
+                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  </div>
+                ) : null}
+                <input
+                  className="adminInput"
+                  key={editImageInputKey}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  onChange={(e) => setEditImageFile(e.target.files?.[0] || null)}
+                />
+                <div className="adminSubtle" style={{ marginTop: 6 }}>
+                  {editImageFile ? editImageFile.name : form.image ? "Current image shown above" : "No image selected"}
+                </div>
               </label>
               <label className="adminLabel">
                 Used
