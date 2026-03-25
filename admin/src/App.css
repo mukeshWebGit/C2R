@@ -349,6 +349,17 @@
   margin-top: 6px;
 }
 
+.adminSuccessBlock {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-top: 6px;
+  text-align: center;
+}
+
 /* Shared card/table styles for inner pages (Users/Admins/Promos) */
 .adminLayout {
   display: flex;

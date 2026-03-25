@@ -351,7 +351,6 @@ const DashFrame = (props: {
           </div>
           <div className="dashHeaderRight">
             
-            <div className="dashAvatar" aria-hidden="true" />
             <button className="dashLogoutBtn" type="button" onClick={props.onLogout}>
               Logout
             </button>
@@ -566,8 +565,7 @@ const DashboardPage = (props: {
             />
           </div>
           <div className="dashHeaderRight">
-             
-            <div className="dashAvatar" aria-hidden="true" />
+              
             <button
               className="dashLogoutBtn"
               type="button"
@@ -1279,7 +1277,13 @@ const AdminsPage = (props: { token: string }) => {
 const PromoCodesPage = (props: { token: string }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [items, setItems] = useState<PromoDoc[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<{
+    code?: string;
+    gift?: string;
+    image?: string;
+  }>({});
 
   const [editingId, setEditingId] = useState<string>("");
   const [form, setForm] = useState<{ code: string; gift: string; image: string; used: boolean }>({
@@ -1289,6 +1293,7 @@ const PromoCodesPage = (props: { token: string }) => {
     used: false,
   });
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
+  const [addImageInputKey, setAddImageInputKey] = useState(0);
 
   const uploadPromoImage = async (file: File) => {
     const fd = new FormData();
@@ -1338,28 +1343,74 @@ const PromoCodesPage = (props: { token: string }) => {
   const cancelEdit = () => {
     setEditingId("");
     setForm({ code: "", gift: "", image: "", used: false });
+    setFieldErrors({});
+    setSuccessMessage("");
+    setAddImageInputKey((k) => k + 1);
+    setNewImageFile(null);
+  };
+
+  const normalizePromoCode = (value: string) =>
+    String(value || "").trim().toUpperCase();
+
+  const validatePromoInputs = (isEdit: boolean) => {
+    const next: { code?: string; gift?: string; image?: string } = {};
+    const code = normalizePromoCode(form.code);
+    const gift = String(form.gift || "").trim();
+
+    if (!code) {
+      next.code = "Promotion code is required.";
+    } else if (!/^[A-Z0-9_-]{4,20}$/.test(code)) {
+      next.code = "Use 4-20 chars: A-Z, 0-9, _ or -";
+    } else if (
+      !isEdit &&
+      items.some((p) => String(p.code || "").toUpperCase() === code)
+    ) {
+      next.code = "Promotion code already exists.";
+    }
+
+    if (!gift) {
+      next.gift = "Gift name is required.";
+    }
+
+    if (!isEdit && !newImageFile) {
+      next.image = "Promo image is required.";
+    }
+
+    setFieldErrors(next);
+    return Object.keys(next).length === 0;
   };
 
   const submitAddOrUpdate = async () => {
-    if (!form.code.trim() || !form.gift.trim()) return;
+    const isEdit = Boolean(editingId);
+    if (!validatePromoInputs(isEdit)) return;
+
     setLoading(true);
     setError("");
+    setSuccessMessage("");
     try {
       if (editingId) {
         await apiFetch(`/api/admin/promocodes/${editingId}`, props.token, {
           method: "PUT",
-          body: JSON.stringify(form),
+          body: JSON.stringify({
+            ...form,
+            code: normalizePromoCode(form.code),
+            gift: String(form.gift || "").trim(),
+          }),
         });
       } else {
         const uploadedImage = newImageFile ? await uploadPromoImage(newImageFile) : form.image;
         await apiFetch("/api/admin/promocodes", props.token, {
           method: "POST",
-          body: JSON.stringify({ code: form.code, gift: form.gift, image: uploadedImage || "" }),
+          body: JSON.stringify({
+            code: normalizePromoCode(form.code),
+            gift: String(form.gift || "").trim(),
+            image: uploadedImage || "",
+          }),
         });
       }
       await load();
       cancelEdit();
-      setNewImageFile(null);
+      if (!editingId) setSuccessMessage("Promo Codes Added");
     } catch (err: any) {
       setError(err?.message || "Unable to save promocode");
       setLoading(false);
@@ -1432,23 +1483,45 @@ const PromoCodesPage = (props: { token: string }) => {
         <div className="adminFormGrid">
           <label className="adminLabel">
             Code
-            <input className="adminInput" value={form.code} onChange={(e) => setForm((p) => ({ ...p, code: e.target.value }))} />
+            <input
+              className="adminInput"
+              value={form.code}
+              onChange={(e) => {
+                const v = e.target.value.toUpperCase();
+                setForm((p) => ({ ...p, code: v }));
+                if (fieldErrors.code) setFieldErrors((prev) => ({ ...prev, code: undefined }));
+              }}
+            />
+            {fieldErrors.code ? <div className="adminErrorBlock">{fieldErrors.code}</div> : null}
           </label>
           <label className="adminLabel">
             Gift
-            <input className="adminInput" value={form.gift} onChange={(e) => setForm((p) => ({ ...p, gift: e.target.value }))} />
+            <input
+              className="adminInput"
+              value={form.gift}
+              onChange={(e) => {
+                setForm((p) => ({ ...p, gift: e.target.value }));
+                if (fieldErrors.gift) setFieldErrors((prev) => ({ ...prev, gift: undefined }));
+              }}
+            />
+            {fieldErrors.gift ? <div className="adminErrorBlock">{fieldErrors.gift}</div> : null}
           </label>
           <label className="adminLabel">
             Upload Image
             <input
               className="adminInput"
+              key={addImageInputKey}
               type="file"
               accept="image/png,image/jpeg,image/jpg,image/webp"
-              onChange={(e) => setNewImageFile(e.target.files?.[0] || null)}
+              onChange={(e) => {
+                setNewImageFile(e.target.files?.[0] || null);
+                if (fieldErrors.image) setFieldErrors((prev) => ({ ...prev, image: undefined }));
+              }}
             />
             <div className="adminSubtle" style={{ marginTop: 6 }}>
               {newImageFile ? newImageFile.name : "No image selected"}
             </div>
+            {fieldErrors.image ? <div className="adminErrorBlock">{fieldErrors.image}</div> : null}
           </label>
         </div>
         <div className="adminActionsRow">
@@ -1456,6 +1529,7 @@ const PromoCodesPage = (props: { token: string }) => {
             Create
           </button>
         </div>
+        {successMessage ? <div className="adminSuccessBlock">{successMessage}</div> : null}
         <p className="adminSubtle" style={{ marginTop: 8 }}>
           Image can be an absolute URL or a stored path (backend serves `/uploads` and `/images`).
         </p>
