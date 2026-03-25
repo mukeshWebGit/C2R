@@ -1095,6 +1095,12 @@ const UserDetailsPage = (props: { token: string; userId: string; onBack: () => v
 const AdminsPage = (props: { token: string }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{
+    email?: string;
+    password?: string;
+    name?: string;
+  }>({});
   const [admins, setAdmins] = useState<
     { id: string; email: string; name: string; role: Role }[]
   >([]);
@@ -1132,9 +1138,35 @@ const AdminsPage = (props: { token: string }) => {
   };
 
   const addAdmin = async () => {
-    if (!newEmail || !newPassword) return;
+    const email = String(newEmail || "").trim();
+    const password = String(newPassword || "");
+    const name = String(newName || "").trim();
+    const next: { email?: string; password?: string; name?: string } = {};
+
+    if (!email) {
+      next.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      next.email = "Enter a valid email address.";
+    }
+
+    if (!password) {
+      next.password = "Password is required.";
+    } else if (password.trim().length < 1) {
+      next.password = "Password cannot be empty.";
+    }
+
+    if (!name) {
+      next.name = "Display name is required.";
+    } else if (name.length < 2) {
+      next.name = "Display name must be at least 2 characters.";
+    }
+
+    setFieldErrors(next);
+    if (Object.keys(next).length > 0) return;
+
     setLoading(true);
     setError("");
+    setSuccessMessage("");
     try {
       await apiFetch("/api/admin/admins", props.token, {
         method: "POST",
@@ -1142,13 +1174,15 @@ const AdminsPage = (props: { token: string }) => {
           email: newEmail,
           password: newPassword,
           role: "ADMIN",
-          ...(newName.trim() ? { name: newName.trim() } : {}),
+          name,
         }),
       });
       await reloadAdmins();
       setNewEmail("");
       setNewPassword("");
       setNewName("");
+      setFieldErrors({});
+      setSuccessMessage("User Added Successfully");
     } catch (err: any) {
       setError(err?.message || "Unable to create admin");
     } finally {
@@ -1244,28 +1278,82 @@ const AdminsPage = (props: { token: string }) => {
         <h2>Add Admin</h2>
         <div className="adminFormGrid">
           <label className="adminLabel">
-            Display name (optional)
+            Display name
             <input
               className="adminInput"
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              onChange={(e) => {
+                setNewName(e.target.value);
+                if (fieldErrors.name) setFieldErrors((prev) => ({ ...prev, name: undefined }));
+              }}
               placeholder="Shown in dashboard greeting"
             />
           </label>
+          {fieldErrors.name ? <div className="adminErrorBlock">{fieldErrors.name}</div> : null}
           <label className="adminLabel">
             Email
-            <input className="adminInput" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} type="email" />
+            <input
+              className="adminInput"
+              value={newEmail}
+              onChange={(e) => {
+                setNewEmail(e.target.value);
+                if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+              }}
+              type="email"
+              placeholder="admin@example.com"
+            />
           </label>
+          {fieldErrors.email ? <div className="adminErrorBlock">{fieldErrors.email}</div> : null}
           <label className="adminLabel">
             Password
-            <input className="adminInput" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} type="password" />
+            <input
+              className="adminInput"
+              value={newPassword}
+              onChange={(e) => {
+                setNewPassword(e.target.value);
+                if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }));
+              }}
+              type="password"
+              placeholder="Enter password"
+              autoComplete="new-password"
+            />
           </label>
+          {fieldErrors.password ? <div className="adminErrorBlock">{fieldErrors.password}</div> : null}
         </div>
         <div className="adminActionsRow">
           <button className="adminPrimaryBtn" type="button" onClick={addAdmin} disabled={loading}>
             Add ADMIN user
           </button>
         </div>
+        {successMessage ? (
+          <div
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setSuccessMessage("");
+            }}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0, 0, 0, 0.45)",
+              zIndex: 1100,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 16,
+            }}
+          >
+            <div className="adminCard" style={{ width: "min(520px, 100%)" }}>
+              <h2 style={{ marginBottom: 8 }}>Success</h2>
+              <div className="adminSuccessBlock" style={{ marginTop: 0 }}>
+                {successMessage}
+              </div>
+              <div className="adminActionsRow" style={{ marginTop: 12 }}>
+                <button className="adminPrimaryBtn" type="button" onClick={() => setSuccessMessage("")}>
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
         <p className="adminSubtle" style={{ marginTop: 8 }}>
           Role is forced to <b>ADMIN</b> (only the MASTER account has full access).
         </p>
@@ -1486,6 +1574,7 @@ const PromoCodesPage = (props: { token: string }) => {
             <input
               className="adminInput"
               value={form.code}
+              placeholder="PROMO CODE (4-20 chars: A-Z, 0-9, _ or -)"
               onChange={(e) => {
                 const v = e.target.value.toUpperCase();
                 setForm((p) => ({ ...p, code: v }));
@@ -1499,6 +1588,7 @@ const PromoCodesPage = (props: { token: string }) => {
             <input
               className="adminInput"
               value={form.gift}
+              placeholder="Gift name"
               onChange={(e) => {
                 setForm((p) => ({ ...p, gift: e.target.value }));
                 if (fieldErrors.gift) setFieldErrors((prev) => ({ ...prev, gift: undefined }));
@@ -1529,11 +1619,39 @@ const PromoCodesPage = (props: { token: string }) => {
             Create
           </button>
         </div>
-        {successMessage ? <div className="adminSuccessBlock">{successMessage}</div> : null}
         <p className="adminSubtle" style={{ marginTop: 8 }}>
           Image can be an absolute URL or a stored path (backend serves `/uploads` and `/images`).
         </p>
       </div>
+      {successMessage ? (
+        <div
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setSuccessMessage("");
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.45)",
+            zIndex: 1100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div className="adminCard" style={{ width: "min(520px, 100%)" }}>
+            <h2 style={{ marginBottom: 8 }}>Success</h2>
+            <div className="adminSuccessBlock" style={{ marginTop: 0 }}>
+              {successMessage}
+            </div>
+            <div className="adminActionsRow" style={{ marginTop: 12 }}>
+              <button className="adminPrimaryBtn" type="button" onClick={() => setSuccessMessage("")}>
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {editingId ? (
         <div
           onMouseDown={(e) => {
