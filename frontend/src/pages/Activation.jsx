@@ -103,7 +103,7 @@ const Activation = () => {
         if (cancelled) return;
 
         if (data?.activationCompletedAt) {
-          navigate("/", { state: { mobileNumber: mobileDigitsOnly } });
+          navigate(`/congratulations/${encodeURIComponent(mobileDigitsOnly)}`);
           return;
         }
 
@@ -126,7 +126,7 @@ const Activation = () => {
             } catch {
               // Even on network error, continue user flow.
             }
-            navigate("/", { state: { mobileNumber: mobileDigitsOnly } });
+            navigate(`/congratulations/${encodeURIComponent(mobileDigitsOnly)}`);
             return;
           }
           setTimeLeftMs(distance);

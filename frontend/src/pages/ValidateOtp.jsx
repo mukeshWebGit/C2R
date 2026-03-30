@@ -182,13 +182,16 @@ const ValidateOtp = () => {
         const scratchDone = Boolean(statusData?.flow?.scratchCompletedAt);
         const activationDone = Boolean(statusData?.flow?.activationCompletedAt);
 
-        if (activationDone) {
-          // After activation timer completion, go to redeem page (not upload-documents).
-          navigate("/", { state: { mobileNumber: mobileFromState } });
-        } else if (scratchDone) {
-          navigate(`/activation/${encodeURIComponent(mobileFromState)}`);
-        } else {
+        // Enforce expected flow order:
+        // - If Scratch isn't completed, always go to Scratch (even if activationCompletedAt exists from old data).
+        // - Only go to redeem page when both Scratch and Activation are completed.
+        if (!scratchDone) {
           navigate(`/scratch/${encodeURIComponent(mobileFromState)}`);
+        } else if (activationDone) {
+          // After activation timer completion, go to the Thank You / gift page.
+          navigate(`/congratulations/${encodeURIComponent(mobileFromState)}`);
+        } else {
+          navigate(`/activation/${encodeURIComponent(mobileFromState)}`);
         }
       } else {
         navigate("/promo-code", {
