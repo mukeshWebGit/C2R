@@ -89,6 +89,7 @@ const Activation = () => {
     let cancelled = false;
 
     const init = async () => {
+      const mobileDigitsOnly = String(mobile || "").replace(/\D/g, "");
       try {
         const res = await fetch(`${API_BASE}/api/users/flow/activation-init`, {
           method: "POST",
@@ -102,7 +103,7 @@ const Activation = () => {
         if (cancelled) return;
 
         if (data?.activationCompletedAt) {
-          navigate(`/upload-documents/${encodeURIComponent(mobile)}`);
+          navigate("/", { state: { mobileNumber: mobileDigitsOnly } });
           return;
         }
 
@@ -125,7 +126,7 @@ const Activation = () => {
             } catch {
               // Even on network error, continue user flow.
             }
-            navigate(`/upload-documents/${encodeURIComponent(mobile)}`);
+            navigate("/", { state: { mobileNumber: mobileDigitsOnly } });
             return;
           }
           setTimeLeftMs(distance);

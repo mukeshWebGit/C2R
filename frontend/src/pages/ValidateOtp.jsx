@@ -183,7 +183,8 @@ const ValidateOtp = () => {
         const activationDone = Boolean(statusData?.flow?.activationCompletedAt);
 
         if (activationDone) {
-          navigate(`/upload-documents/${encodeURIComponent(mobileFromState)}`);
+          // After activation timer completion, go to redeem page (not upload-documents).
+          navigate("/", { state: { mobileNumber: mobileFromState } });
         } else if (scratchDone) {
           navigate(`/activation/${encodeURIComponent(mobileFromState)}`);
         } else {
