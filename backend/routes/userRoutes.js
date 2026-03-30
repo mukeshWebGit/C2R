@@ -41,6 +41,17 @@ const upload = multer({
   },
 });
 
+const normalizeMobile = (value) => String(value || "").replace(/\D/g, "");
+
+const mobileQuery = (rawMobile) => {
+  const raw = String(rawMobile || "").trim();
+  const digits = normalizeMobile(raw);
+  const ors = [];
+  if (raw) ors.push({ mobile: raw });
+  if (digits && digits !== raw) ors.push({ mobile: digits });
+  return ors.length > 1 ? { $or: ors } : ors[0] || { mobile: "" };
+};
+
 router.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
@@ -69,7 +80,7 @@ router.post(
     }
 
     try {
-      const user = await User.findOne({ mobile });
+      const user = await User.findOne(mobileQuery(mobile));
       if (!user) {
         return res.status(404).json({ message: "User not found." });
       }
@@ -193,7 +204,7 @@ router.post("/check-mobile", async (req, res) => {
   }
 
   try {
-    const exists = await User.exists({ mobile });
+    const exists = await User.exists(mobileQuery(mobile));
     return res.json({ exists: !!exists });
   } catch (err) {
     console.error("Error checking mobile:", err.message);
@@ -211,7 +222,7 @@ router.post("/flow/scratch-complete", async (req, res) => {
   }
   try {
     const user = await User.findOneAndUpdate(
-      { mobile },
+      mobileQuery(mobile),
       {
         $set: {
           "flow.scratchCompletedAt": new Date(),
@@ -242,7 +253,7 @@ router.post("/flow/activation-init", async (req, res) => {
     ? Number(durationMs)
     : 60 * 1000;
   try {
-    const user = await User.findOne({ mobile });
+    const user = await User.findOne(mobileQuery(mobile));
     if (!user) return res.status(404).json({ message: "User not found." });
 
     const now = Date.now();
@@ -252,7 +263,17 @@ router.post("/flow/activation-init", async (req, res) => {
     const hasValidFutureEnd = Number.isFinite(currentEnd) && currentEnd > now;
     const isCompleted = Boolean(user.flow?.activationCompletedAt);
 
-    if (!hasValidFutureEnd && !isCompleted) {
+    // If timer already expired but completion wasn't persisted yet,
+    // mark completion now to avoid restarting the timer.
+    if (!isCompleted && Number.isFinite(currentEnd) && currentEnd <= now) {
+      user.flow = {
+        ...(user.flow || {}),
+        activationCompletedAt: new Date(),
+      };
+      // Clear endsAt since it's no longer active.
+      user.flow.activationEndsAt = null;
+      await user.save();
+    } else if (!hasValidFutureEnd && !isCompleted) {
       user.flow = {
         ...(user.flow || {}),
         activationEndsAt: new Date(now + duration),
@@ -280,7 +301,7 @@ router.post("/flow/activation-complete", async (req, res) => {
   }
   try {
     const user = await User.findOneAndUpdate(
-      { mobile },
+      mobileQuery(mobile),
       {
         $set: {
           "flow.activationCompletedAt": new Date(),
@@ -313,7 +334,7 @@ router.get("/details", async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ mobile }).lean();
+    const user = await User.findOne(mobileQuery(mobile)).lean();
     if (!user) {
       return res.status(404).json({ message: "User not found." });
     }

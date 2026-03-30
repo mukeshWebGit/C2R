@@ -63,9 +63,10 @@ const Activation = () => {
     const fetchGift = async () => {
       if (!mobile) return;
       setError("");
+      const mobileDigitsOnly = String(mobile || "").replace(/\D/g, "");
       try {
         const res = await fetch(
-          `${API_BASE}/api/users/details?mobile=${encodeURIComponent(mobile)}`
+          `${API_BASE}/api/users/details?mobile=${encodeURIComponent(mobileDigitsOnly)}`
         );
         const data = await res.json();
         if (!res.ok) {
@@ -90,11 +91,34 @@ const Activation = () => {
 
     const init = async () => {
       const mobileDigitsOnly = String(mobile || "").replace(/\D/g, "");
+      const decideNextAfterActivation = async () => {
+        try {
+          const statusRes = await fetch(
+            `${API_BASE}/api/users/details?mobile=${encodeURIComponent(mobileDigitsOnly)}`
+          );
+          const statusData = await statusRes.json().catch(() => ({}));
+          if (!statusRes.ok) throw new Error(statusData?.message || "Unable to load status.");
+
+          const docsUploaded = Boolean(statusData?.documents?.uploadedAt);
+          if (cancelled) return;
+
+          if (docsUploaded) {
+            navigate(`/congratulations/${encodeURIComponent(mobileDigitsOnly)}`);
+          } else {
+            navigate(`/upload-documents/${encodeURIComponent(mobileDigitsOnly)}`);
+          }
+        } catch {
+          if (cancelled) return;
+          // If status can't be loaded, safest next step is documents upload.
+          navigate(`/upload-documents/${encodeURIComponent(mobileDigitsOnly)}`);
+        }
+      };
+
       try {
         const res = await fetch(`${API_BASE}/api/users/flow/activation-init`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mobile, durationMs: 60 * 1000 }),
+          body: JSON.stringify({ mobile: mobileDigitsOnly, durationMs: 60 * 1000 }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -103,7 +127,7 @@ const Activation = () => {
         if (cancelled) return;
 
         if (data?.activationCompletedAt) {
-          navigate(`/congratulations/${encodeURIComponent(mobileDigitsOnly)}`);
+          await decideNextAfterActivation();
           return;
         }
 
@@ -121,12 +145,12 @@ const Activation = () => {
               await fetch(`${API_BASE}/api/users/flow/activation-complete`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ mobile }),
+                body: JSON.stringify({ mobile: mobileDigitsOnly }),
               });
             } catch {
               // Even on network error, continue user flow.
             }
-            navigate(`/congratulations/${encodeURIComponent(mobileDigitsOnly)}`);
+            await decideNextAfterActivation();
             return;
           }
           setTimeLeftMs(distance);

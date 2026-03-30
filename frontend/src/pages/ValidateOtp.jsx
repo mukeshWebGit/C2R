@@ -11,6 +11,7 @@ const ValidateOtp = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const mobileFromState = location.state?.mobileNumber;
+  const mobileDigitsOnly = String(mobileFromState || "").replace(/\D/g, "");
 
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState("");
@@ -47,7 +48,7 @@ const ValidateOtp = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ mobile: mobileFromState }),
+        body: JSON.stringify({ mobile: mobileDigitsOnly }),
         signal: controller.signal,
       });
 
@@ -127,7 +128,7 @@ const ValidateOtp = () => {
     }
 
     const expectedOtp = sessionStorage.getItem(
-      `${OTP_STORAGE_PREFIX}${mobileFromState}`
+      `${OTP_STORAGE_PREFIX}${mobileDigitsOnly}`
     );
     if (!expectedOtp) {
       setOtpError(
@@ -163,7 +164,7 @@ const ValidateOtp = () => {
 
       try {
         sessionStorage.removeItem(
-          `${OTP_STORAGE_PREFIX}${mobileFromState}`
+          `${OTP_STORAGE_PREFIX}${mobileDigitsOnly}`
         );
       } catch {
         /* ignore */
@@ -172,7 +173,7 @@ const ValidateOtp = () => {
       localStorage.setItem("c2r_session", "1");
       if (exists) {
         const statusRes = await fetch(
-          `${API_BASE}/api/users/details?mobile=${encodeURIComponent(mobileFromState)}`
+          `${API_BASE}/api/users/details?mobile=${encodeURIComponent(mobileDigitsOnly)}`
         );
         const statusData = await statusRes.json().catch(() => ({}));
         if (!statusRes.ok) {
@@ -180,22 +181,25 @@ const ValidateOtp = () => {
         }
 
         const scratchDone = Boolean(statusData?.flow?.scratchCompletedAt);
+        const docsUploaded = Boolean(statusData?.documents?.uploadedAt);
         const activationDone = Boolean(statusData?.flow?.activationCompletedAt);
 
-        // Enforce expected flow order:
-        // - If Scratch isn't completed, always go to Scratch (even if activationCompletedAt exists from old data).
-        // - Only go to redeem page when both Scratch and Activation are completed.
+        // Desired flow order:
+        // 1) Scratch card
+        // 2) Activation timer
+        // 3) If activation timer is done -> Documents -> Congratulations
         if (!scratchDone) {
-          navigate(`/scratch/${encodeURIComponent(mobileFromState)}`);
-        } else if (activationDone) {
-          // After activation timer completion, go to the Thank You / gift page.
-          navigate(`/congratulations/${encodeURIComponent(mobileFromState)}`);
+          navigate(`/scratch/${encodeURIComponent(mobileDigitsOnly)}`);
+        } else if (!activationDone) {
+          navigate(`/activation/${encodeURIComponent(mobileDigitsOnly)}`);
+        } else if (!docsUploaded) {
+          navigate(`/upload-documents/${encodeURIComponent(mobileDigitsOnly)}`);
         } else {
-          navigate(`/activation/${encodeURIComponent(mobileFromState)}`);
+          navigate(`/congratulations/${encodeURIComponent(mobileDigitsOnly)}`);
         }
       } else {
         navigate("/promo-code", {
-          state: { mobileNumber: mobileFromState },
+          state: { mobileNumber: mobileDigitsOnly },
         });
       }
     } catch (err) {

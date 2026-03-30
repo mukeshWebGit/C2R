@@ -38,6 +38,8 @@ const Scratch = () => {
   useEffect(() => {
     if (!shouldGoActivation || !mobileFromState) return;
     const t = window.setTimeout(() => {
+      // After scratch, always go to Activation page.
+      // Activation timer completion (timer==0) decides what happens next.
       navigate(`/activation/${encodeURIComponent(mobileFromState)}`);
     }, 20000);
     return () => window.clearTimeout(t);
